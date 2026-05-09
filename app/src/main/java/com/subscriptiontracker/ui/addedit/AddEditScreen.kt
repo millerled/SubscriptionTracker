@@ -39,10 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.subscriptiontracker.domain.model.BillingCycle
 import com.subscriptiontracker.domain.model.SubscriptionStatus
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 val categories = listOf("娱乐", "工具", "健康", "学习", "生活", "其他")
 
@@ -85,7 +83,6 @@ fun AddEditScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // Name
             OutlinedTextField(
                 value = state.name,
                 onValueChange = { viewModel.updateName(it) },
@@ -98,7 +95,6 @@ fun AddEditScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Amount
             OutlinedTextField(
                 value = state.amount,
                 onValueChange = { viewModel.updateAmount(it) },
@@ -112,7 +108,6 @@ fun AddEditScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Billing Cycle
             BillingCycleDropdown(
                 selected = state.billingCycle,
                 onSelected = { viewModel.updateBillingCycle(it) },
@@ -121,7 +116,6 @@ fun AddEditScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Deadline Date
             OutlinedTextField(
                 value = state.deadlineDate.formatFull(),
                 onValueChange = {},
@@ -148,7 +142,6 @@ fun AddEditScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Category
             CategoryDropdown(
                 selected = state.category,
                 onSelected = { viewModel.updateCategory(it) },
@@ -159,7 +152,6 @@ fun AddEditScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Status
             StatusDropdown(
                 selected = state.status,
                 onSelected = { viewModel.updateStatus(it) },
@@ -168,7 +160,6 @@ fun AddEditScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Notes
             OutlinedTextField(
                 value = state.notes,
                 onValueChange = { viewModel.updateNotes(it) },

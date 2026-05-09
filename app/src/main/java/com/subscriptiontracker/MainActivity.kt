@@ -43,7 +43,7 @@ fun SubscriptionTrackerNavGraph() {
             HomeScreen(
                 viewModel = homeViewModel,
                 onAddClick = {
-                    addEditViewModel.editingId = 0
+                    addEditViewModel.resetForNew()
                     navController.navigate("addEdit/0")
                 },
                 onEditClick = { id ->

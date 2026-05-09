@@ -37,8 +37,12 @@ class AddEditViewModel(application: Application) : AndroidViewModel(application)
     private val _formState = MutableStateFlow(AddEditFormState())
     val formState: StateFlow<AddEditFormState> = _formState.asStateFlow()
 
-    var editingId: Long = 0
-        private set
+    private var editingId: Long = 0
+
+    fun resetForNew() {
+        editingId = 0
+        _formState.value = AddEditFormState()
+    }
 
     fun loadSubscription(id: Long) {
         if (id == 0L) return

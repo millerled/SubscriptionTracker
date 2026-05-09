@@ -2,7 +2,6 @@ package com.subscriptiontracker.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -13,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.subscriptiontracker.domain.model.SubscriptionStatus
 import com.subscriptiontracker.ui.theme.BadgeShape
+import com.subscriptiontracker.ui.theme.StatusActive
 import com.subscriptiontracker.ui.theme.StatusConsidering
 import com.subscriptiontracker.ui.theme.StatusExpiring
 import com.subscriptiontracker.ui.theme.StatusPaused
@@ -31,11 +31,6 @@ fun StatusBadge(
             StatusExpiring,
             "即将到期"
         )
-        status == SubscriptionStatus.ACTIVE -> Triple(
-            Color(0xFF34C759).copy(alpha = 0.12f),
-            Color(0xFF34C759),
-            status.displayName
-        )
         else -> statusBadgeColors(status)
     }
 
@@ -53,6 +48,11 @@ fun StatusBadge(
 
 private fun statusBadgeColors(status: SubscriptionStatus): Triple<Color, Color, String> {
     return when (status) {
+        SubscriptionStatus.ACTIVE -> Triple(
+            StatusActive.copy(alpha = 0.12f),
+            StatusActive,
+            status.displayName
+        )
         SubscriptionStatus.CONSIDERING -> Triple(
             StatusConsidering.copy(alpha = 0.12f),
             StatusConsidering,
@@ -71,11 +71,6 @@ private fun statusBadgeColors(status: SubscriptionStatus): Triple<Color, Color, 
         SubscriptionStatus.UNDECIDED -> Triple(
             StatusUndecided.copy(alpha = 0.12f),
             StatusUndecided,
-            status.displayName
-        )
-        else -> Triple(
-            Color(0xFF34C759).copy(alpha = 0.12f),
-            Color(0xFF34C759),
             status.displayName
         )
     }

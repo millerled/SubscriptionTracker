@@ -30,7 +30,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val subscriptionToDelete: StateFlow<Subscription?> = _subscriptionToDelete
 
     fun setSortOption(option: SortOption) {
-        _sortOption.value = option
+        if (_sortOption.value != option) {
+            _sortOption.value = option
+        }
     }
 
     fun showDeleteConfirmation(subscription: Subscription) {

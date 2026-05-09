@@ -3,13 +3,13 @@ package com.subscriptiontracker.ui.home
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -69,19 +69,16 @@ fun HomeScreen(
             )
 
             if (subscriptions.isEmpty()) {
-                Box(
+                Text(
+                    text = "还没有订阅\n点击 + 开始添加",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "还没有订阅\n点击 + 开始添加",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = TextSecondary,
-                        textAlign = TextAlign.Center
-                    )
-                }
+                        .wrapContentSize(Alignment.Center)
+                        .padding(32.dp)
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()

@@ -26,6 +26,7 @@ import com.subscriptiontracker.ui.theme.CardUndecidedBackground
 import com.subscriptiontracker.ui.theme.TextPrimary
 import com.subscriptiontracker.ui.theme.TextSecondary
 import com.subscriptiontracker.util.daysUntil
+import com.subscriptiontracker.util.formatAmountPerCycle
 import com.subscriptiontracker.util.remainingDaysText
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -86,7 +87,7 @@ fun SubscriptionCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = subscription.amountPerCycleText(),
+                    text = formatAmountPerCycle(subscription.amount, subscription.billingCycle.shortName),
                     style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
                     color = TextSecondary.copy(alpha = textAlpha)
                 )
@@ -110,15 +111,5 @@ private fun cardBackgroundColor(status: SubscriptionStatus, isExpiring: Boolean)
     status == SubscriptionStatus.PAUSED -> CardPausedBackground
     status == SubscriptionStatus.UNDECIDED -> CardUndecidedBackground
     else -> androidx.compose.ui.graphics.Color.White
-}
-
-private fun Subscription.amountPerCycleText(): String {
-    val cycleText = when (billingCycle) {
-        com.subscriptiontracker.domain.model.BillingCycle.MONTHLY -> "月"
-        com.subscriptiontracker.domain.model.BillingCycle.QUARTERLY -> "季"
-        com.subscriptiontracker.domain.model.BillingCycle.YEARLY -> "年"
-        com.subscriptiontracker.domain.model.BillingCycle.ONE_TIME -> "次"
-    }
-    return "¥%.2f / %s".format(amount, cycleText)
 }
 

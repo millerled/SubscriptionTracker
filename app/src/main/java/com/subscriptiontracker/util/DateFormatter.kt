@@ -4,11 +4,14 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
+private val shortFormatter = DateTimeFormatter.ofPattern("MM/dd")
+private val fullFormatter = DateTimeFormatter.ofPattern("yyyy年MM月dd日")
+
 fun LocalDate.formatShort(): String =
-    this.format(DateTimeFormatter.ofPattern("MM/dd"))
+    this.format(shortFormatter)
 
 fun LocalDate.formatFull(): String =
-    this.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"))
+    this.format(fullFormatter)
 
 fun LocalDate.daysUntil(): Long =
     ChronoUnit.DAYS.between(LocalDate.now(), this)
