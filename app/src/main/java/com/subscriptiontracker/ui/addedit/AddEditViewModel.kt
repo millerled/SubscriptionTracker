@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.subscriptiontracker.data.local.AppDatabase
 import com.subscriptiontracker.data.repository.SubscriptionRepository
 import com.subscriptiontracker.domain.model.BillingCycle
+import com.subscriptiontracker.domain.model.Intention
 import com.subscriptiontracker.domain.model.Subscription
 import com.subscriptiontracker.domain.model.SubscriptionStatus
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,10 @@ data class AddEditFormState(
     val deadlineDate: LocalDate = LocalDate.now().plusMonths(1),
     val category: String = "",
     val status: SubscriptionStatus = SubscriptionStatus.ACTIVE,
+    val autoRenew: Boolean = false,
+    val intention: Intention = Intention.UNDECIDED,
+    val logoUri: String? = null,
+    val wallpaperUri: String? = null,
     val notes: String = "",
     val nameError: String? = null,
     val amountError: String? = null,
@@ -32,7 +37,10 @@ data class AddEditFormState(
 class AddEditViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getInstance(application)
-    private val repository = SubscriptionRepository(database.subscriptionDao())
+    private val repository = SubscriptionRepository(
+        database.subscriptionDao(),
+        database.paymentHistoryDao()
+    )
 
     private val _formState = MutableStateFlow(AddEditFormState())
     val formState: StateFlow<AddEditFormState> = _formState.asStateFlow()
@@ -56,6 +64,10 @@ class AddEditViewModel(application: Application) : AndroidViewModel(application)
                 deadlineDate = subscription.deadlineDate,
                 category = subscription.category,
                 status = subscription.status,
+                autoRenew = subscription.autoRenew,
+                intention = subscription.intention,
+                logoUri = subscription.logoUri,
+                wallpaperUri = subscription.wallpaperUri,
                 notes = subscription.notes ?: ""
             )
         }
@@ -85,13 +97,20 @@ class AddEditViewModel(application: Application) : AndroidViewModel(application)
         _formState.value = _formState.value.copy(status = status)
     }
 
+    fun updateAutoRenew(autoRenew: Boolean) {
+        _formState.value = _formState.value.copy(autoRenew = autoRenew)
+    }
+
+    fun updateIntention(intention: Intention) {
+        _formState.value = _formState.value.copy(intention = intention)
+    }
+
     fun updateNotes(notes: String) {
         _formState.value = _formState.value.copy(notes = notes)
     }
 
     fun save() {
         val state = _formState.value
-
         var hasError = false
         var newState = state
 
@@ -126,6 +145,10 @@ class AddEditViewModel(application: Application) : AndroidViewModel(application)
             deadlineDate = state.deadlineDate,
             category = state.category.trim(),
             status = state.status,
+            autoRenew = state.autoRenew,
+            intention = state.intention,
+            logoUri = state.logoUri,
+            wallpaperUri = state.wallpaperUri,
             notes = state.notes.ifBlank { null }
         )
 

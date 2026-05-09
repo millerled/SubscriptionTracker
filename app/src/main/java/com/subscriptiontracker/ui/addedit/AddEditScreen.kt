@@ -3,6 +3,7 @@ package com.subscriptiontracker.ui.addedit
 import android.app.DatePickerDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -32,13 +34,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.subscriptiontracker.domain.model.BillingCycle
+import com.subscriptiontracker.domain.model.Intention
 import com.subscriptiontracker.domain.model.SubscriptionStatus
+import com.subscriptiontracker.util.formatFull
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -155,6 +160,27 @@ fun AddEditScreen(
             StatusDropdown(
                 selected = state.status,
                 onSelected = { viewModel.updateStatus(it) },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = state.autoRenew,
+                    onCheckedChange = { viewModel.updateAutoRenew(it) }
+                )
+                Text("自动续费（开启后为连续包月/季/年）")
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            IntentionDropdown(
+                selected = state.intention,
+                onSelected = { viewModel.updateIntention(it) },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -300,6 +326,47 @@ private fun StatusDropdown(
                     text = { Text(status.displayName) },
                     onClick = {
                         onSelected(status)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun IntentionDropdown(
+    selected: Intention,
+    onSelected: (Intention) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = selected.displayName,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("意向") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            Intention.entries.forEach { intention ->
+                DropdownMenuItem(
+                    text = { Text(intention.displayName) },
+                    onClick = {
+                        onSelected(intention)
                         expanded = false
                     }
                 )

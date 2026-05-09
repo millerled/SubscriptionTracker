@@ -13,5 +13,6 @@ val Shapes = Shapes(
 )
 
 val CardShape = RoundedCornerShape(20.dp)
-val ButtonShape = RoundedCornerShape(14.dp)
-val BadgeShape = RoundedCornerShape(8.dp)
+val BadgeShape = RoundedCornerShape(12.dp)
+val LogoShape = RoundedCornerShape(12.dp)
+val ChipShape = RoundedCornerShape(30.dp)

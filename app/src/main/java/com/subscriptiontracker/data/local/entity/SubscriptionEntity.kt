@@ -13,9 +13,11 @@ data class SubscriptionEntity(
     val deadlineDate: Long,
     val category: String,
     val status: String,
+    val autoRenew: Boolean = false,
+    val intention: String = "UNDECIDED",
     val logoUri: String? = null,
+    val wallpaperUri: String? = null,
     val notes: String? = null,
-    val intention: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val sortOrder: Int = 0
 )

@@ -2,33 +2,35 @@ package com.subscriptiontracker.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary palette
-val Primary = Color(0xFF007AFF)
-val PrimaryVariant = Color(0xFF0062CC)
-val OnPrimary = Color.White
-
-// Background
-val Background = Color(0xFFF2F2F7)
-val Surface = Color.White
-val SurfaceVariant = Color(0xFFF5F5F5)
+// Backgrounds
+val PageBackground = Color(0xFFF5F7FA)
+val CardWhite = Color(0xFFFFFFFF)
+val DividerColor = Color(0xFFEDF2F7)
 
 // Text
-val TextPrimary = Color(0xFF1C1C1E)
-val TextSecondary = Color(0xFF8E8E93)
-val TextTertiary = Color(0xFFC7C7CC)
+val TextMain = Color(0xFF1A2C3E)
+val TextSecondary = Color(0xFF6C7A89)
+val TextMuted = Color(0xFF94A3B8)
 
-// Status colors
-val StatusActive = Color(0xFF34C759)
-val StatusConsidering = Color(0xFFFF9500)
-val StatusPlanned = Color(0xFF007AFF)
-val StatusPaused = Color(0xFFC7C7CC)
-val StatusUndecided = Color(0xFFFFCC00)
-val StatusExpiring = Color(0xFFFF3B30)
+// Primary
+val Primary = Color(0xFF1C4E80)
+val OnPrimary = Color.White
 
-// Card backgrounds by status
-val CardActiveBackground = Color.White
-val CardConsideringBackground = Color(0xFFFFF3E0)
-val CardPlannedBackground = Color(0xFFE3F2FD)
-val CardPausedBackground = Color(0xFFF5F5F5)
-val CardUndecidedBackground = Color(0xFFFFFDE7)
-val CardExpiringBackground = Color(0xFFFFF5F5)
+// Status border colors (thin gradient on card)
+val StatusBorderActive = Color(0xFF2ECC71)
+val StatusBorderRenewing = Color(0xFFE67E22)
+val StatusBorderExpiring = Color(0xFFFF6B6B)
+val StatusBorderPaused = Color(0xFF94A3B8)
+
+// Intention dot colors (deeper than border colors)
+val IntentionConsidering = Color(0xFFD97706)
+val IntentionQuitting = Color(0xFFB91C1C)
+val IntentionUndecided = Color(0xFF64748B)
+val IntentionUndecidedStale = Color(0xFF374151)
+
+// Stats
+val PaidGreen = Color(0xFF2ECC71)
+val PendingOrange = Color(0xFFE67E22)
+
+// Shapes (moved from separate file for simplicity)
+
