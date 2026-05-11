@@ -57,6 +57,7 @@ fun HomeScreen(
     val renewingCount by viewModel.renewingCount.collectAsState()
     val expiringCount by viewModel.expiringCount.collectAsState()
     val activeFilter by viewModel.activeFilter.collectAsState()
+    val sortOption by viewModel.sortOption.collectAsState()
     val pendingConfirmations by viewModel.pendingConfirmations.collectAsState()
     val dialogIndex by viewModel.dialogCurrentIndex.collectAsState()
     val subscriptionToDelete by viewModel.subscriptionToDelete.collectAsState()
@@ -133,6 +134,13 @@ fun HomeScreen(
                         FilterChipData(SubscriptionStatus.PAUSED, "已失效", pausedCount, activeFilter == SubscriptionStatus.PAUSED)
                     ),
                     onChipSelected = { status -> viewModel.setFilter(status) }
+                )
+            }
+
+            item {
+                SortSelector(
+                    currentSort = sortOption,
+                    onSortSelected = { viewModel.setSortOption(it) }
                 )
             }
 

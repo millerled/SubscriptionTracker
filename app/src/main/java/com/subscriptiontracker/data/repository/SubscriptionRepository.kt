@@ -27,7 +27,21 @@ class SubscriptionRepository(
             SortOption.CUSTOM -> dao.getAllByCustomOrder()
             SortOption.BY_STATUS -> dao.getAllByDeadline()
         }
-        return flow.map { entities -> entities.map { it.toDomain() } }
+        return flow.map { entities ->
+            val list = entities.map { it.toDomain() }
+            if (sortOption == SortOption.BY_STATUS) {
+                list.sortedWith(compareBy<Subscription> { statusPriority(it.status) }.thenBy { it.deadlineDate })
+            } else {
+                list
+            }
+        }
+    }
+
+    private fun statusPriority(status: SubscriptionStatus): Int = when (status) {
+        SubscriptionStatus.ACTIVE -> 0
+        SubscriptionStatus.RENEWING -> 1
+        SubscriptionStatus.EXPIRING -> 2
+        SubscriptionStatus.PAUSED -> 3
     }
 
     fun getByStatus(status: SubscriptionStatus): Flow<List<Subscription>> =
@@ -83,6 +97,12 @@ class SubscriptionRepository(
 
     suspend fun unpinSubscription(id: Long) {
         dao.updateSortOrder(id, 0)
+    }
+
+    suspend fun getExpiredByStatus(status: SubscriptionStatus): List<Subscription> {
+        val today = LocalDate.now()
+        return dao.getExpiredWithStatus(status.name, today.toEpochDay())
+            .map { it.toDomain() }
     }
 
     suspend fun getActivityHeatmapData(weeks: Int = 12): Map<LocalDate, Int> {

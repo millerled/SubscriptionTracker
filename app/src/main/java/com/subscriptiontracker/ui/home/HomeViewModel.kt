@@ -29,16 +29,20 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _activeFilter = MutableStateFlow<SubscriptionStatus?>(null)
     val activeFilter: StateFlow<SubscriptionStatus?> = _activeFilter
 
+    private val _sortOption = MutableStateFlow(com.subscriptiontracker.domain.model.SortOption.BY_DEADLINE)
+    val sortOption: StateFlow<com.subscriptiontracker.domain.model.SortOption> = _sortOption
+
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val subscriptions: StateFlow<List<Subscription>> = _activeFilter
-        .flatMapLatest { filter ->
+    val subscriptions: StateFlow<List<Subscription>> = combine(_activeFilter, _sortOption) { filter, sort -> filter to sort }
+        .flatMapLatest { (filter, sort) ->
             if (filter != null) repository.getByStatus(filter)
-            else repository.getSubscriptions(com.subscriptiontracker.domain.model.SortOption.BY_DEADLINE)
+            else repository.getSubscriptions(sort)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allSubscriptions: StateFlow<List<Subscription>> = repository
-        .getSubscriptions(com.subscriptiontracker.domain.model.SortOption.BY_DEADLINE)
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val allSubscriptions: StateFlow<List<Subscription>> = _sortOption
+        .flatMapLatest { sort -> repository.getSubscriptions(sort) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Stats
@@ -161,6 +165,14 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun checkDueSubscriptions() {
         viewModelScope.launch {
+            // 1. Auto-transition: non-auto-renew + expired + still ACTIVE → EXPIRING
+            val expiredNonAuto = repository.getExpiredByStatus(SubscriptionStatus.ACTIVE)
+                .filter { !it.autoRenew }
+            expiredNonAuto.forEach { sub ->
+                repository.update(sub.copy(status = SubscriptionStatus.EXPIRING))
+            }
+
+            // 2. Confirmation for ACTIVE subscriptions due within 7 days
             val due = repository.getDueWithinDays(7)
                 .filter { it.status == SubscriptionStatus.ACTIVE }
             if (due.size in 1..7) {
@@ -172,6 +184,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setFilter(status: SubscriptionStatus?) {
         _activeFilter.value = status
+    }
+
+    fun setSortOption(option: com.subscriptiontracker.domain.model.SortOption) {
+        _sortOption.value = option
     }
 
     fun onPaymentChoice(choice: PaymentChoice) {
@@ -229,6 +245,22 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun confirmDelete() {
         val subscription = _subscriptionToDelete.value ?: return
         viewModelScope.launch {
+            // Clean up local image files
+            val context = getApplication<Application>()
+            listOfNotNull(subscription.logoUri, subscription.wallpaperUri).forEach { path ->
+                if (!path.startsWith("preset:") && !path.startsWith("content://")) {
+                    java.io.File(path).delete()
+                }
+            }
+            // Also clean up the images directory if empty
+            val imgDir = java.io.File(context.filesDir, "images")
+            if (imgDir.isDirectory) {
+                val remaining = imgDir.listFiles()
+                if (remaining != null && remaining.isEmpty()) {
+                    imgDir.delete()
+                }
+            }
+
             repository.delete(subscription)
             _subscriptionToDelete.value = null
         }

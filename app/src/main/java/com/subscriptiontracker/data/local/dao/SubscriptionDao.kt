@@ -51,4 +51,7 @@ interface SubscriptionDao {
            OR (modifiedAt >= :startMillis AND modifiedAt <= :endMillis AND modifiedAt > 0)
     """)
     suspend fun getActiveInRange(startMillis: Long, endMillis: Long): List<SubscriptionEntity>
+
+    @Query("SELECT * FROM subscriptions WHERE status = :status AND deadlineDate < :todayEpoch")
+    suspend fun getExpiredWithStatus(status: String, todayEpoch: Long): List<SubscriptionEntity>
 }
