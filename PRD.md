@@ -217,6 +217,8 @@ SubscriptionTracker 是一款**订阅日期提醒器 + 生活 Deadline 追踪工
 | IntentionUndecidedStale | `#374151` | 过期未处理圆点 |
 | PaidGreen | `#34A853` | 已扣费绿 |
 | PendingOrange | `#FBBC05` | 待扣费黄 |
+| AmberWarning | `#F59E0B` | 非自动续费/手动续费标签 |
+| DangerRed | `#EF4444` | 即将到期快捷筛选红 |
 
 ### 6.3 首页信息架构
 ```

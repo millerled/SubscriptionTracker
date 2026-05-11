@@ -61,8 +61,9 @@ app/src/main/java/com/subscriptiontracker/
 5. **导航**：单 NavHost，当前路由为 `home`、`addEdit/{subscriptionId}`、`detail/{subscriptionId}`；通知与 Widget 使用 `subscriptiontracker://detail/{id}` 深链进入详情页。
 6. **状态管理**：ViewModel 通过 StateFlow 暴露 UI 状态，Compose 使用 `collectAsState()` 订阅。
 7. **图片处理**：自定义 Logo/壁纸通过系统图片选择器读取，并复制到应用内部 `files/images` 目录；数据库保存本地文件路径或 `preset:<id>`。
-8. **通知权限**：Manifest 声明 `POST_NOTIFICATIONS`，`MainActivity` 在 Android 13+ 首次启动时用 Activity Result API 请求运行时权限；用户拒绝时应用继续运行。
-9. **数据库迁移**：维护两条迁移 — `MIGRATION_1_2`（重建 subscriptions 表以修正 `intention` 非空约束，同时新增 autoRenew/wallpaperUri，并创建 payment_history 表）和 `MIGRATION_2_3`（新增 startDate/modifiedAt 列）；未启用 destructive migration。旧数据迁移后的 `startDate` 默认值为 0，对应 1970-01-01。
+8. **Logo 预设与颜色**：预设库定义在 `AppLogoIcon.kt`，包含常见软件的品牌色和别名；Google 四色（蓝/红/黄/绿）引用自 `Color.kt` 的 `Primary`/`StatusBorderExpiring`/`StatusBorderRenewing`/`StatusBorderActive`，不在两个文件中重复定义。Logo 查找结果在 Composable 中通过 `remember(name, logoUri)` 缓存，避免每次重组都 O(n) 扫描预设列表。
+9. **通知权限**：Manifest 声明 `POST_NOTIFICATIONS`，`MainActivity` 在 Android 13+ 首次启动时用 Activity Result API 请求运行时权限；用户拒绝时应用继续运行。
+10. **数据库迁移**：维护两条迁移 — `MIGRATION_1_2`（重建 subscriptions 表以修正 `intention` 非空约束，同时新增 autoRenew/wallpaperUri，并创建 payment_history 表）和 `MIGRATION_2_3`（新增 startDate/modifiedAt 列）；未启用 destructive migration。旧数据迁移后的 `startDate` 默认值为 0，对应 1970-01-01。
 
 ## 数据模型
 
