@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,8 +42,8 @@ import com.subscriptiontracker.domain.model.Subscription
 import com.subscriptiontracker.domain.model.SubscriptionStatus
 import com.subscriptiontracker.ui.components.AppLogoIcon
 import com.subscriptiontracker.ui.components.BrandLetterLogo
-import com.subscriptiontracker.ui.components.logoAccentColor
 import com.subscriptiontracker.ui.components.logoStyleFor
+import com.subscriptiontracker.ui.theme.AmberWarning
 import com.subscriptiontracker.ui.theme.CardWhite
 import com.subscriptiontracker.ui.theme.IntentionConsidering
 import com.subscriptiontracker.ui.theme.IntentionQuitting
@@ -66,8 +67,10 @@ fun SubscriptionCard(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val style = logoStyleFor(subscription.name, subscription.logoUri)
-    val accentColor = logoAccentColor(subscription.name, subscription.logoUri)
+    val style = remember(subscription.name, subscription.logoUri) {
+        logoStyleFor(subscription.name, subscription.logoUri)
+    }
+    val accentColor = style.colors.first()
     val statusColor = statusBorderColor(subscription.status)
     val intentionColor = intentionDotColor(subscription.intention, subscription.deadlineDate)
     val daysLeft = subscription.deadlineDate.daysUntil()
@@ -196,7 +199,7 @@ fun SubscriptionCard(
                     if (subscription.autoRenew) {
                         StatusPill(text = "自动续费", color = accentColor)
                     } else {
-                        StatusPill(text = cycleText, color = Color(0xFFF59E0B))
+                        StatusPill(text = cycleText, color = AmberWarning)
                     }
                 }
             }

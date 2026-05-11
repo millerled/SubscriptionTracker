@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,7 +49,6 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.subscriptiontracker.ui.components.AppLogoIcon
 import com.subscriptiontracker.ui.components.BrandLetterLogo
-import com.subscriptiontracker.ui.components.logoAccentColor
 import com.subscriptiontracker.ui.components.logoStyleFor
 import com.subscriptiontracker.ui.theme.CardWhite
 import com.subscriptiontracker.ui.theme.PageBackground
@@ -205,8 +205,10 @@ fun DetailScreen(
 
 @Composable
 private fun DetailHero(sub: com.subscriptiontracker.domain.model.Subscription) {
-    val accent = logoAccentColor(sub.name, sub.logoUri)
-    val logoStyle = logoStyleFor(sub.name, sub.logoUri)
+    val logoStyle = remember(sub.name, sub.logoUri) {
+        logoStyleFor(sub.name, sub.logoUri)
+    }
+    val accent = logoStyle.colors.first()
 
     Box(
         modifier = Modifier

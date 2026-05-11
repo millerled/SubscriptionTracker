@@ -27,6 +27,10 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.subscriptiontracker.ui.theme.LogoShape
+import com.subscriptiontracker.ui.theme.Primary
+import com.subscriptiontracker.ui.theme.StatusBorderActive
+import com.subscriptiontracker.ui.theme.StatusBorderExpiring
+import com.subscriptiontracker.ui.theme.StatusBorderRenewing
 import com.subscriptiontracker.util.initialLetter
 import java.io.File
 
@@ -46,11 +50,6 @@ data class LogoStyle(
     val colors: List<Color>,
     val category: String = ""
 )
-
-val GoogleBlue = Color(0xFF4285F4)
-val GoogleRed = Color(0xFFEA4335)
-val GoogleYellow = Color(0xFFFBBC05)
-val GoogleGreen = Color(0xFF34A853)
 
 private val AppleMusicPink = Color(0xFFFA2D65)
 private val AppleOrange = Color(0xFFFF9500)
@@ -81,8 +80,8 @@ val presetLogos = listOf(
     PresetLogo("github", "GitHub", "G", Color(0xFF24292F), "工具"),
     PresetLogo("icloud", "iCloud", "☁", ICloudBlue, "工具",
         brandColors = listOf(Color(0xFF8EDCFF), Color(0xFF2F80ED)), aliases = listOf("icloud+", "苹果云")),
-    PresetLogo("googleone", "Google One", "G", GoogleBlue, "工具",
-        brandColors = listOf(GoogleBlue, GoogleRed, GoogleYellow, GoogleGreen), aliases = listOf("google")),
+    PresetLogo("googleone", "Google One", "G", Primary, "工具",
+        brandColors = listOf(Primary, StatusBorderExpiring, StatusBorderRenewing, StatusBorderActive), aliases = listOf("google")),
     PresetLogo("dropbox", "Dropbox", "D", Color(0xFF0061FF), "工具"),
     PresetLogo("microsoft", "Microsoft", "M", Color(0xFF7FBA00), "工具",
         brandColors = listOf(Color(0xFFF25022), Color(0xFF7FBA00), Color(0xFF00A4EF), Color(0xFFFFB900)), aliases = listOf("office", "microsoft 365")),
@@ -118,14 +117,14 @@ val presetLogos = listOf(
 )
 
 private val googleColorSets = listOf(
-    listOf(GoogleBlue, GoogleRed, GoogleYellow, GoogleGreen),
-    listOf(GoogleRed, GoogleBlue, GoogleGreen, GoogleYellow),
-    listOf(GoogleGreen, GoogleYellow, GoogleRed, GoogleBlue),
-    listOf(GoogleYellow, GoogleGreen, GoogleBlue, GoogleRed),
-    listOf(GoogleBlue, GoogleGreen, GoogleYellow, GoogleRed),
-    listOf(GoogleRed, GoogleYellow, GoogleBlue, GoogleGreen),
-    listOf(GoogleGreen, GoogleBlue, GoogleRed, GoogleYellow),
-    listOf(GoogleYellow, GoogleRed, GoogleGreen, GoogleBlue),
+    listOf(Primary, StatusBorderExpiring, StatusBorderRenewing, StatusBorderActive),
+    listOf(StatusBorderExpiring, Primary, StatusBorderActive, StatusBorderRenewing),
+    listOf(StatusBorderActive, StatusBorderRenewing, StatusBorderExpiring, Primary),
+    listOf(StatusBorderRenewing, StatusBorderActive, Primary, StatusBorderExpiring),
+    listOf(Primary, StatusBorderActive, StatusBorderRenewing, StatusBorderExpiring),
+    listOf(StatusBorderExpiring, StatusBorderRenewing, Primary, StatusBorderActive),
+    listOf(StatusBorderActive, Primary, StatusBorderExpiring, StatusBorderRenewing),
+    listOf(StatusBorderRenewing, StatusBorderExpiring, StatusBorderActive, Primary),
 )
 
 private fun logoGoogleColors(name: String): List<Color> {

@@ -40,7 +40,9 @@ import com.subscriptiontracker.domain.model.SubscriptionStatus
 import com.subscriptiontracker.ui.components.ActivityHeatmap
 import com.subscriptiontracker.ui.components.ConfirmDeleteDialog
 import com.subscriptiontracker.ui.components.SubscriptionActionSheet
+import com.subscriptiontracker.ui.theme.AmberWarning
 import com.subscriptiontracker.ui.theme.CardWhite
+import com.subscriptiontracker.ui.theme.DangerRed
 import com.subscriptiontracker.ui.theme.PageBackground
 import com.subscriptiontracker.ui.theme.Primary
 import com.subscriptiontracker.ui.theme.TextMuted
@@ -386,14 +388,14 @@ private fun AlertFilterRow(
             text = "即将续订",
             count = renewingCount,
             selected = activeFilter == SubscriptionStatus.RENEWING,
-            color = Color(0xFFF59E0B),
+            color = AmberWarning,
             onClick = { onFilterSelected(SubscriptionStatus.RENEWING) }
         )
         QuickFilterPill(
             text = "即将到期",
             count = expiringCount,
             selected = activeFilter == SubscriptionStatus.EXPIRING,
-            color = Color(0xFFEF4444),
+            color = DangerRed,
             onClick = { onFilterSelected(SubscriptionStatus.EXPIRING) }
         )
         QuickFilterPill(

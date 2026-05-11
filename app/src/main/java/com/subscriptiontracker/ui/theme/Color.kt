@@ -29,6 +29,10 @@ val IntentionQuitting = Color(0xFFB91C1C)
 val IntentionUndecided = Color(0xFF64748B)
 val IntentionUndecidedStale = Color(0xFF374151)
 
+// Accent
+val AmberWarning = Color(0xFFF59E0B)
+val DangerRed = Color(0xFFEF4444)
+
 // Stats
 val PaidGreen = Color(0xFF34A853)
 val PendingOrange = Color(0xFFFBBC05)

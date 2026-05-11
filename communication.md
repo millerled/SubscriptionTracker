@@ -474,3 +474,32 @@ Codex 的 4 个文件修改全部通过编译，Kotlin 编译和 KSP 注解处�
 
 ### 提交
 所有 Codex 改动 + 本次复查记录一并 commit 并 push 到 origin/master。
+
+---
+
+## 小c (Claude Code) /simplify 审查与清理 (2026-05-11)
+
+对 v2.1 UI/Logo 改动的第二轮审查，并行启动三个 agent 覆盖复用/质量/效率。
+
+**已修复 6 项：**
+
+| 来源 | 问题 | 修复 |
+|------|------|------|
+| 复用 | AppLogoIcon.kt 重复定义 GoogleBlue/Red/Yellow/Green（与 Color.kt Primary/StatusBorderExpiring/Renewing/Active 同色值） | 删除 4 个 val，引用 Color.kt 常量 |
+| 效率 | SubscriptionCard 每张卡调 `logoStyleFor` + `logoAccentColor` 两次扫描 57 项预设列表 | 合并为单次 `remember(name, logoUri) { logoStyleFor(...) }`，accentColor 直接取 `style.colors.first()` |
+| 效率 | DetailScreen.DetailHero 同样重复调用 logoAccentColor + logoStyleFor | 同上修复 |
+| 复用 | SubscriptionCard 硬编码 `Color(0xFFF59E0B)`（琥珀色） | Color.kt 新增 `AmberWarning` 常量 |
+| 复用 | HomeScreen 硬编码 `Color(0xFFF59E0B)` 和 `Color(0xFFEF4444)` | 新增 `DangerRed` 常量，两处替换 |
+| 质量 | DetailScreen/SubscriptionCard 含未使用的 `logoAccentColor` import | 移除 |
+
+**已跳过（改动太大/风险高）：**
+
+| 问题 | 跳过原因 |
+|------|----------|
+| AddEditScreen 三个下拉组件 ~105 行重复 | 抽出泛型 EnumDropdown 需要改 3 处调用方 + 测试 |
+| DetailScreen 硬编码 `"RENEWED"/"CANCELLED"` 字符串映射 | 需新增 PaymentAction 枚举或查询替换，Risk > Reward |
+| HomeScreen 16 个独立 `collectAsState()` | 合并为 UiState 是架构级改动 |
+| SubscriptionCard/HomeScreen Pill 组件提取 | 三个 Pill 圆角尺寸/alpha 各有差异，强行统一不如保持独立 |
+| `formatAmountPerCycle` 未被复用 | SubscriptionCard 金额和周期在不同 Text 节点中样式不同，硬拼不合适 |
+
+构建验证：`./gradlew.bat assembleDebug` — BUILD SUCCESSFUL。
