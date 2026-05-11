@@ -177,10 +177,12 @@ SubscriptionTracker 是一款**订阅日期提醒器 + 生活 Deadline 追踪工
 - Room 数据库名：`subscription_tracker_db`
 - 当前版本：`3`
 - 表：`subscriptions`、`payment_history`
-- 迁移：`MIGRATION_2_3` 为 subscriptions 增加 `startDate` 与 `modifiedAt`
+- 迁移：
+  - `MIGRATION_1_2`：新建 `payment_history` 表（含外键级联删除），`subscriptions` 增加 `autoRenew`、`wallpaperUri` 列
+  - `MIGRATION_2_3`：`subscriptions` 增加 `startDate`、`modifiedAt` 列
 - 日期字段：`deadlineDate/startDate/paymentDate` 使用 epoch days
 - 时间戳字段：`createdAt/modifiedAt` 使用 epoch millis
-- 旧库从 v2 迁移到 v3 时，`startDate` 默认写入 0，即 1970-01-01
+- 旧库从 v1 迁移到 v2 时，`autoRenew` 默认 0（false）；从 v2 迁移到 v3 时，`startDate` 默认 0（1970-01-01）
 
 ---
 

@@ -215,7 +215,24 @@ Codex 的 4 个文件修改全部通过编译，Kotlin 编译和 KSP 注解处�
 ### 3. Git 提交与推送
 将所有改动（含 communication.md 更新）commit 并 push 到 origin/master。
 
-### 4. 仍未完成的事项（需用户介入）
+### 4. 修复：数据库迁移缺失导致闪退 (2026-05-11)
+用户更新 APK 后打开闪退。排查数据库版本演进：
+- v1.0 MVP: DB version 1
+- v2.0: DB version 2（新增 payment_history 表、autoRenew、wallpaperUri）
+- 当前: DB version 3（新增 startDate、modifiedAt）
+
+**根因**：只有 `MIGRATION_2_3`，缺少 `MIGRATION_1_2`。如果用户手机安装过 v1.0（DB=1），Room 找不到 1→2→3 的迁移路径，直接抛异常崩溃。
+
+**修复**：在 `AppDatabase.kt` 新增 `MIGRATION_1_2`：
+- 创建 `payment_history` 表（含外键和索引）
+- 给 `subscriptions` 表添加 `autoRenew` 列（INTEGER NOT NULL DEFAULT 0）
+- 给 `subscriptions` 表添加 `wallpaperUri` 列（TEXT，可空）
+
+同时注册两条迁移：`.addMigrations(MIGRATION_1_2, MIGRATION_2_3)`
+
+构建验证通过，APK 已重新打包。
+
+### 5. 仍未完成的事项（需用户介入）
 - **运行时 UI 验证**: 需要在模拟器或真机上安装 APK 手动测试 Codex 建议的 5 条 smoke test 流程
 - **自动化测试**: 项目尚无 `src/test` 或 `src/androidTest` 目录，需要从零搭建测试框架
 - **后续产品修复**: re-trigger 确认弹窗、autoRenew 分支逻辑、图片生命周期清理（见 PRD §9）

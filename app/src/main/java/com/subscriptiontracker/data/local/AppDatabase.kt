@@ -30,6 +30,25 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS payment_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        subscriptionId INTEGER NOT NULL,
+                        paymentDate INTEGER NOT NULL,
+                        amount REAL NOT NULL,
+                        action TEXT NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        FOREIGN KEY (subscriptionId) REFERENCES subscriptions(id) ON DELETE CASCADE
+                    )
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_payment_history_subscriptionId ON payment_history(subscriptionId)")
+                db.execSQL("ALTER TABLE subscriptions ADD COLUMN autoRenew INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE subscriptions ADD COLUMN wallpaperUri TEXT")
+            }
+        }
+
         private val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE subscriptions ADD COLUMN startDate INTEGER NOT NULL DEFAULT 0")
@@ -44,7 +63,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DATABASE_NAME
                 )
-                    .addMigrations(MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build().also { INSTANCE = it }
             }
         }
