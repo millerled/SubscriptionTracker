@@ -232,7 +232,27 @@ Codex 的 4 个文件修改全部通过编译，Kotlin 编译和 KSP 注解处�
 
 构建验证通过，APK 已重新打包。
 
-### 5. 仍未完成的事项（需用户介入）
+### 5. /simplify 代码审查与清理 (2026-05-11)
+启动三个并行 agent 审查了 `HEAD~3..HEAD` 的代码改动。审查结果：
+
+**代码复用**: 无重复问题，现有改动均为合理的新增逻辑。
+
+**代码质量** — 已修复 2 个问题：
+- `HomeViewModel.kt` `checkDueSubscriptions()`: 删除编号注释（代码已自解释）
+- `PaymentChoice` 枚举: 添加 `action` 属性，消除 `onPaymentChoice()` 中手动字符串映射（`"RENEWED"/"CANCELLED"/"UNCERTAIN"` → `choice.action`）
+
+**代码质量** — 已知悉但跳过的：
+- ViewModel 中内联文件 I/O（`confirmDelete()` 图片清理）：移到 Repository 需要更大重构，暂保持现状
+- `originalSubscription` 存储整个对象而非仅两个字段：改动谨慎，不冒险重构
+
+**效率** — 已修复 1 个问题：
+- `HomeViewModel`: `subscriptions` 原本通过 `combine(_activeFilter, _sortOption).flatMapLatest` 独立查询 DB，与 `allSubscriptions` 在无筛选时产生重复查询。改为 `subscriptions` 从 `allSubscriptions` 派生，无筛选时直接复用，有筛选时内存过滤 + `sortedBy(deadlineDate)`
+
+**跳过（影响小）**:
+- `checkDueSubscriptions` N+1 更新导致级联 stats 重算（数据集很小，单次开销 trivial）
+- `getActivityHeatmapData` 对象分配（非热路径，数据量有限）
+
+### 6. 仍未完成的事项（需用户介入）
 - **运行时 UI 验证**: 需要在模拟器或真机上安装 APK 手动测试 Codex 建议的 5 条 smoke test 流程
 - **自动化测试**: 项目尚无 `src/test` 或 `src/androidTest` 目录，需要从零搭建测试框架
 - **后续产品修复**: re-trigger 确认弹窗、autoRenew 分支逻辑、图片生命周期清理（见 PRD §9）

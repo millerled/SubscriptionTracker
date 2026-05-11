@@ -34,17 +34,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val sortOption: StateFlow<com.subscriptiontracker.domain.model.SortOption> = _sortOption
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val subscriptions: StateFlow<List<Subscription>> = combine(_activeFilter, _sortOption) { filter, sort -> filter to sort }
-        .flatMapLatest { (filter, sort) ->
-            if (filter != null) repository.getByStatus(filter)
-            else repository.getSubscriptions(sort)
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val allSubscriptions: StateFlow<List<Subscription>> = _sortOption
         .flatMapLatest { sort -> repository.getSubscriptions(sort) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val subscriptions: StateFlow<List<Subscription>> = combine(allSubscriptions, _activeFilter) { all, filter ->
+        if (filter != null) all.filter { it.status == filter }.sortedBy { it.deadlineDate }
+        else all
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Stats
     private val _monthlyTotal = MutableStateFlow(0.0)
@@ -164,14 +162,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun checkDueSubscriptions() {
         viewModelScope.launch {
-            // 1. Auto-transition: non-auto-renew + expired + still ACTIVE → EXPIRING
             val expiredNonAuto = repository.getExpiredByStatus(SubscriptionStatus.ACTIVE)
                 .filter { !it.autoRenew }
             expiredNonAuto.forEach { sub ->
                 repository.update(sub.copy(status = SubscriptionStatus.EXPIRING))
             }
 
-            // 2. Confirmation for ACTIVE subscriptions due within 7 days
             val due = repository.getDueWithinDays(7)
                 .filter { it.status == SubscriptionStatus.ACTIVE }
             if (due.size in 1..7) {
@@ -196,12 +192,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
         val sub = pending[index].subscription
         viewModelScope.launch {
-            val action = when (choice) {
-                PaymentChoice.RENEW -> "RENEWED"
-                PaymentChoice.CANCEL -> "CANCELLED"
-                PaymentChoice.UNDECIDED -> "UNCERTAIN"
-            }
-            repository.recordPayment(sub.id, sub.amount, action)
+            repository.recordPayment(sub.id, sub.amount, choice.action)
 
             when (choice) {
                 PaymentChoice.RENEW -> {

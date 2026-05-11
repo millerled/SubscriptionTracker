@@ -27,7 +27,11 @@ data class PendingSubscription(
     val choice: PaymentChoice = PaymentChoice.UNDECIDED
 )
 
-enum class PaymentChoice { RENEW, CANCEL, UNDECIDED }
+enum class PaymentChoice(val action: String) {
+    RENEW("RENEWED"),
+    CANCEL("CANCELLED"),
+    UNDECIDED("UNCERTAIN")
+}
 
 @Composable
 fun PaymentConfirmationDialog(
