@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.subscriptiontracker.data.local.AppDatabase
 import com.subscriptiontracker.data.repository.SubscriptionRepository
+import com.subscriptiontracker.domain.model.BillingCycle
 import com.subscriptiontracker.domain.model.Subscription
 import com.subscriptiontracker.domain.model.SubscriptionStatus
 import kotlinx.coroutines.Job
@@ -143,13 +144,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 allSubscriptions,
                 repository.getRenewedPaymentsInRange(monthStartEpoch, monthEndEpoch)
             ) { subs, payments ->
-                val total = subs.sumOf { it.amount }
+                val total = subs
+                    .filter { it.status != SubscriptionStatus.PAUSED }
+                    .sumOf { it.monthlyBudgetAmount(epochRange) }
                 _monthlyTotal.value = total
-                val totalDurationDays = subs.sumOf {
-                    val duration = it.deadlineDate.toEpochDay() - it.startDate.toEpochDay()
-                    if (duration > 0) duration else 0L
-                }
-                _dailyAverage.value = if (totalDurationDays > 0) total / totalDurationDays else 0.0
+                _dailyAverage.value = total / now.lengthOfMonth()
                 _paidAmount.value = payments.sumOf { it.amount }
                 _pendingAmount.value = subs
                     .filter { it.deadlineDate.toEpochDay() in epochRange }
@@ -210,8 +209,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     val newDeadline = if (cycleDays > 0)
                         sub.deadlineDate.plusDays(cycleDays)
                     else sub.deadlineDate
+                    val newStatus = if (newDeadline.isAfter(LocalDate.now().plusDays(7))) {
+                        SubscriptionStatus.ACTIVE
+                    } else {
+                        SubscriptionStatus.RENEWING
+                    }
                     repository.update(sub.copy(
-                        status = SubscriptionStatus.RENEWING,
+                        status = newStatus,
                         deadlineDate = newDeadline
                     ))
                 }
@@ -266,3 +270,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 }
+
+private fun Subscription.monthlyBudgetAmount(monthRange: LongRange): Double =
+    when (billingCycle) {
+        BillingCycle.MONTHLY -> amount
+        BillingCycle.QUARTERLY -> amount / 3.0
+        BillingCycle.YEARLY -> amount / 12.0
+        BillingCycle.ONE_TIME -> if (deadlineDate.toEpochDay() in monthRange) amount else 0.0
+    }

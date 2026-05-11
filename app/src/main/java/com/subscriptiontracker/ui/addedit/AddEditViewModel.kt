@@ -57,9 +57,11 @@ class AddEditViewModel(application: Application) : AndroidViewModel(application)
     val formState: StateFlow<AddEditFormState> = _formState.asStateFlow()
 
     private var editingId: Long = 0
+    private var originalSubscription: Subscription? = null
 
     fun resetForNew() {
         editingId = 0
+        originalSubscription = null
         val today = LocalDate.now()
         _formState.value = AddEditFormState(
             startDateText = today.formatFull(),
@@ -72,6 +74,7 @@ class AddEditViewModel(application: Application) : AndroidViewModel(application)
         editingId = id
         viewModelScope.launch {
             val subscription = repository.getById(id) ?: return@launch
+            originalSubscription = subscription
             val computedDeadline = subscription.startDate.plusDays(subscription.billingCycle.cycleDays)
             val isOverridden = subscription.deadlineDate != computedDeadline ||
                 subscription.billingCycle == BillingCycle.ONE_TIME
@@ -277,6 +280,8 @@ class AddEditViewModel(application: Application) : AndroidViewModel(application)
             logoUri = state.logoUri,
             wallpaperUri = state.wallpaperUri,
             notes = state.notes.ifBlank { null },
+            createdAt = originalSubscription?.createdAt ?: System.currentTimeMillis(),
+            sortOrder = originalSubscription?.sortOrder ?: 0,
             startDate = state.startDate,
             modifiedAt = System.currentTimeMillis()
         )
