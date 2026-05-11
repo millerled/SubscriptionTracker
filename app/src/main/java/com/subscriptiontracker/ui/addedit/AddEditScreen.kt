@@ -70,10 +70,12 @@ import coil.request.ImageRequest
 import com.subscriptiontracker.domain.model.BillingCycle
 import com.subscriptiontracker.domain.model.Intention
 import com.subscriptiontracker.domain.model.SubscriptionStatus
+import com.subscriptiontracker.ui.components.AppLogoIcon
 import com.subscriptiontracker.ui.components.PresetLogo
 import com.subscriptiontracker.ui.components.presetLogos
 import com.subscriptiontracker.ui.theme.CardWhite
 import com.subscriptiontracker.ui.theme.Primary
+import com.subscriptiontracker.ui.theme.TextMain
 import com.subscriptiontracker.ui.theme.TextMuted
 import com.subscriptiontracker.ui.theme.TextSecondary
 import com.subscriptiontracker.util.formatFull
@@ -432,12 +434,38 @@ private fun LogoPickerSection(
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "订阅图标",
-            style = MaterialTheme.typography.titleSmall,
-            color = TextSecondary,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "常见软件图标",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = TextMain
+                )
+                Text(
+                    text = "选择预设后会自动带入分类",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextMuted,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+            if (!selectedUri.isNullOrBlank()) {
+                Text(
+                    text = "已选择",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Primary,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Primary.copy(alpha = 0.1f))
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                )
+            }
+        }
 
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -455,19 +483,12 @@ private fun LogoPickerSection(
                         .clickable { onPresetSelected(preset) }
                         .padding(8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(preset.bgColor),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = preset.icon,
-                            fontSize = 20.sp,
-                            color = Color.White
-                        )
-                    }
+                    AppLogoIcon(
+                        name = preset.label,
+                        logoUri = "preset:${preset.id}",
+                        size = 44.dp,
+                        showBorder = false
+                    )
                     Text(
                         text = preset.label,
                         fontSize = 11.sp,

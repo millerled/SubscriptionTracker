@@ -62,7 +62,7 @@ app/src/main/java/com/subscriptiontracker/
 6. **状态管理**：ViewModel 通过 StateFlow 暴露 UI 状态，Compose 使用 `collectAsState()` 订阅。
 7. **图片处理**：自定义 Logo/壁纸通过系统图片选择器读取，并复制到应用内部 `files/images` 目录；数据库保存本地文件路径或 `preset:<id>`。
 8. **通知权限**：Manifest 声明 `POST_NOTIFICATIONS`，`MainActivity` 在 Android 13+ 首次启动时用 Activity Result API 请求运行时权限；用户拒绝时应用继续运行。
-9. **数据库迁移**：维护两条迁移 — `MIGRATION_1_2`（新建 payment_history 表、新增 autoRenew/wallpaperUri 列）和 `MIGRATION_2_3`（新增 startDate/modifiedAt 列）；未启用 destructive migration。旧数据迁移后的 `startDate` 默认值为 0，对应 1970-01-01。
+9. **数据库迁移**：维护两条迁移 — `MIGRATION_1_2`（重建 subscriptions 表以修正 `intention` 非空约束，同时新增 autoRenew/wallpaperUri，并创建 payment_history 表）和 `MIGRATION_2_3`（新增 startDate/modifiedAt 列）；未启用 destructive migration。旧数据迁移后的 `startDate` 默认值为 0，对应 1970-01-01。
 
 ## 数据模型
 
@@ -101,9 +101,9 @@ app/src/main/java/com/subscriptiontracker/
 ### 4 个主状态
 | 状态 | 显示名 | 边框色 | 当前含义 |
 |------|--------|--------|----------|
-| ACTIVE | 生效中 | `#2ECC71` | 正常使用中，也会被到期前 7 天确认弹窗扫描 |
-| RENEWING | 即将续订 | `#E67E22` | 用户确认续订后，如果推进后的到期日仍在 7 天内，则保留即将续订 |
-| EXPIRING | 即将到期 | `#FF6B6B` | 用户选择不续，或手动设置为即将到期 |
+| ACTIVE | 生效中 | `#34A853` | 正常使用中，也会被到期前 7 天确认弹窗扫描 |
+| RENEWING | 即将续订 | `#FBBC05` | 用户确认续订后，如果推进后的到期日仍在 7 天内，则保留即将续订 |
+| EXPIRING | 即将到期 | `#EA4335` | 用户选择不续，或手动设置为即将到期 |
 | PAUSED | 暂停/已失效 | `#94A3B8` | 用户手动停用/失效 |
 
 ### 3 个意向
@@ -118,11 +118,12 @@ app/src/main/java/com/subscriptiontracker/
 - 统计卡片：UI 文案为“本月订阅支出”；当前实现排除 PAUSED，月付按原金额、季付按 1/3、年付按 1/12 折算，一次性仅在到期当月计入；日均为本月折算总额除以当月天数，已扣费来自本月 `RENEWED` 记录，待扣费来自本月内到期的 ACTIVE 订阅。
 - 过去 12 周订阅活跃度热力图，基于创建和修改时间生成。
 - 状态筛选：全部、生效中、已失效；首页额外展示即将续订/即将到期数量。
-- 订阅卡片：薄渐变状态边框、Logo/预设图标、意向圆点、分类色点、剩余天数、周期文案、金额。
+- 首页视觉：大标题“订阅”、胶囊分段（订阅/暂停）、快捷筛选与排序胶囊，整体参考小红书收集图中的软件订阅管理界面。
+- 订阅卡片：品牌色柔和渐变背景、左侧大 Logo、续费进度条、金额/周期、下次付款日期、状态/自动续费 pill、右侧淡化品牌水印图形；急迫到期使用浅红底，PAUSED 使用灰色降级底色。
 - 新增/编辑表单：名称、金额、周期、开始日期、到期日期、状态、自动续费、意向、图标、壁纸、备注；日期字段支持日历选择，也支持 `yyyy-MM-dd`、`yyyy/MM/dd`、`yyyyMMdd`、`yyyy年M月d日`、`M月d日` 输入。
 - 到期日自动推算：开始日期 + 周期天数；用户手动修改后标记为已覆盖。选择 ONE_TIME 时周期天数为 0，到期日字段在 UI 中禁用。
-- 预设 Logo 与自定义图片：预设包含音乐、视频、游戏、AI、云盘、工具、学习、健康、生活、其他；自定义图片复制到内部存储确保持久化。
-- 详情页：壁纸区/状态色背景、摘要信息、展开编辑入口、历史扣费记录。
+- 预设 Logo 与自定义图片：预设库包含常见软件/服务（Spotify、Netflix、YouTube、Bilibili、爱奇艺、Apple Music、Apple Books、iCloud、Google One、Microsoft、ChatGPT、Claude、Notion、Figma、GitHub、Steam、京东 PLUS、淘宝、美团、微信读书等）以及通用分类图标；支持根据订阅名称自动推断品牌色与图标；自定义图片复制到内部存储确保持久化。
+- 详情页：品牌色 Hero 卡片（有壁纸时显示壁纸并加遮罩，无壁纸时显示品牌色渐变和 Logo 水印）、摘要信息、展开编辑入口、历史扣费记录。
 - 到期前 7 天扣费确认弹窗：1-7 条 ACTIVE 到期项会逐条询问续/不续/不确定，并写入扣费记录；选择续订会推进到期日，若新到期日超过 7 天则状态回到 ACTIVE，否则为 RENEWING；超过 7 条时当前不会弹窗或展示批量提示。
 - 过期自动流转：非自动续费 + 已过期 + ACTIVE 状态的订阅，进入首页时自动标记为 EXPIRING，不写入扣费记录。
 - 通知权限：Android 13+ 首次启动时自动弹出 `POST_NOTIFICATIONS` 权限请求。
@@ -147,8 +148,9 @@ app/src/main/java/com/subscriptiontracker/
 - **状态筛选叠加**: 当选中 ACTIVE 或 PAUSED 筛选时，列表调用 `getByStatus()`，结果固定按到期日升序，不使用当前 SortSelector 选项。
 
 ## UI 设计关键字
-现代极简卡片风格 · 浅灰背景 `#F5F7FA` · 白色卡片 · 20dp 大圆角 · 薄渐变状态边框 · 深色文字 · Material3 · 轻量 Apple 风格
+Google 四色品牌感 · 小红书参考订阅管理界面 · 浅灰背景 `#F7F9FC` · 品牌色渐变订阅卡片 · 大 Logo + 淡化水印 · 胶囊筛选/排序 · 24dp 大圆角 · Material3 · 轻量 Apple/Google 混合风格
 
 ## 版本记录
 - **v1.0 MVP** (2026-05): 首页卡片列表 CRUD、状态颜色、多排序枚举、基础 PRD/CLAUDE 文档。
 - **v2.0 当前代码口径** (2026-05): 4 主状态 + 3 意向、统计卡片、筛选、扣费确认、详情页、扣费记录、图片 Logo/壁纸、热力图、通知 Worker、桌面 Widget、深链详情。
+- **v2.1 UI/Logo 优化** (2026-05): 常见软件预设 Logo 库、名称自动匹配品牌色、Google 风格 Launcher 图标、首页品牌色订阅卡片、详情页品牌 Hero、胶囊筛选/排序视觉升级。

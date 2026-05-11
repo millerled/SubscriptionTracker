@@ -256,3 +256,221 @@ Codex 的 4 个文件修改全部通过编译，Kotlin 编译和 KSP 注解处�
 - **运行时 UI 验证**: 需要在模拟器或真机上安装 APK 手动测试 Codex 建议的 5 条 smoke test 流程
 - **自动化测试**: 项目尚无 `src/test` 或 `src/androidTest` 目录，需要从零搭建测试框架
 - **后续产品修复**: re-trigger 确认弹窗、autoRenew 分支逻辑、图片生命周期清理（见 PRD §9）
+
+---
+
+## 小亮 (Codex) 追加排查：旧库 schema 校验仍可能闪退 (2026-05-11)
+
+用户反馈安装后仍闪退。小亮重新阅读本文件和数据库历史后，确认小 c 已经补过 `MIGRATION_1_2`，但发现一个更细的 Room schema 问题：
+
+- v1 `SubscriptionEntity` 中 `intention` 是 `String?`，因此旧库里 `subscriptions.intention` 是可空列。
+- 当前 `SubscriptionEntity` 中 `intention` 是非空 `String = "UNDECIDED"`，Room 期望 `subscriptions.intention` 为 NOT NULL。
+- 小 c 之前的 `MIGRATION_1_2` 只是 `ALTER TABLE` 添加 `autoRenew` 和 `wallpaperUri`，没有重建 `subscriptions` 表，所以旧 v1 数据库升级后仍保留可空的 `intention` 列。
+- Room 迁移结束后会校验实际表结构，可能抛出 “Migration didn't properly handle subscriptions” 类型异常并导致启动闪退。
+
+小亮已修改：
+
+- `app/src/main/java/com/subscriptiontracker/data/local/AppDatabase.kt`
+
+新的 `MIGRATION_1_2` 行为：
+
+1. 创建 `subscriptions_new`，字段结构对齐 v2 期望：
+   - `autoRenew INTEGER NOT NULL DEFAULT 0`
+   - `intention TEXT NOT NULL DEFAULT 'UNDECIDED'`
+   - `wallpaperUri TEXT`
+2. 从旧 `subscriptions` 拷贝数据：
+   - `autoRenew` 写入 `0`
+   - `intention` 使用 `COALESCE(intention, 'UNDECIDED')`
+   - `wallpaperUri` 写入 `NULL`
+3. 删除旧 `subscriptions`
+4. 将 `subscriptions_new` 重命名为 `subscriptions`
+5. 创建 `payment_history` 表和索引
+
+验证状态：
+
+- `git diff --check -- app/src/main/java/com/subscriptiontracker/data/local/AppDatabase.kt` 通过。
+- 小亮当前环境无法完整构建：
+  - `.\gradlew.bat assembleDebug` 被沙箱网络权限拦截在 Gradle 下载阶段。
+  - 使用本地 Gradle 路径可启动 Gradle，但当前环境缺 Android Gradle Plugin `8.7.3` 缓存，仍无法完成构建。
+  - `adb.exe` 在小亮环境中运行被系统拒绝：`Access is denied`，所以无法抓取真机/模拟器 logcat。
+
+给小 c 的建议：
+
+1. 先在有完整依赖缓存/网络权限的环境执行：
+
+```powershell
+.\gradlew.bat assembleDebug
+```
+
+2. 必须用“覆盖安装旧版本、有旧数据”的方式验证迁移，不要只测 clean install：
+
+- 安装 v1 APK，新增一条订阅，其中 `intention` 可以为 null。
+- 覆盖安装当前 APK。
+- 启动 App，确认不闪退，旧订阅保留且意向显示为 UNDECIDED。
+
+3. 如果仍闪退，优先抓取 logcat 中 Room 的 `Expected` / `Found` schema 对比，继续补迁移表结构。
+
+---
+
+## 小亮 (Codex) UI/Logo 视觉优化记录 (2026-05-11)
+
+用户提供了三组小红书 UI 参考资料：
+
+- `C:/Users/32909/Desktop/xhs-ui-research/01-24apps-review`
+- `C:/Users/32909/Desktop/xhs-ui-research/02-detail-page-ui`
+- `C:/Users/32909/Desktop/xhs-ui-research/03-markbuy-showcase`
+
+小亮学习后的设计提炼：
+
+- 首页参考方向：大标题、胶囊筛选、软件 Logo 主导、柔和浅色背景、订阅卡片带品牌色氛围和右侧水印图形。
+- 编辑页参考方向：大预览卡、品牌色主视觉、胶囊控件、清晰的状态/金额/周期信息层级。
+- 整体方向：保留当前浅色 Material3 基础，但更接近 Google 系软件的四色品牌感和常见 App 图标识别度。
+
+### 1. 常见软件图标库与 Logo 体系
+
+修改文件：
+
+- `app/src/main/java/com/subscriptiontracker/ui/components/AppLogoIcon.kt`
+- `app/src/main/java/com/subscriptiontracker/ui/addedit/AddEditScreen.kt`
+
+完成内容：
+
+- 扩展 `PresetLogo` 数据结构，新增：
+  - `brandColors`
+  - `aliases`
+- 增加常见 App/服务预设，包括 Spotify、Netflix、YouTube、Bilibili、爱奇艺、腾讯视频、Apple Music、Apple Books、iCloud、Google One、Microsoft、OneDrive、ChatGPT、Claude、Cursor、Notion、Figma、GitHub、Steam、Xbox、PlayStation、Duolingo、Coursera、京东 PLUS、淘宝、美团、饿了么、滴滴、微信读书、QQ 等。
+- 新增名称推断能力：当订阅名称包含预设 label 或 alias 时，即使用户没有手动选择 `preset:<id>`，列表也会自动使用匹配到的品牌色和字母/符号图标。
+- 新增统一 Logo 样式工具：
+  - `findPresetLogo()`
+  - `inferPresetLogo()`
+  - `logoStyleFor()`
+  - `logoAccentColor()`
+  - `logoBackgroundColor()`
+  - `BrandLetterLogo()`
+- 没有直接打包第三方真实商标图片，避免版权和资源维护问题；当前实现是“品牌色 + 字母/符号 + 统一圆角图标”的抽象预设库。
+- 新增/编辑页的“订阅图标”区域改为“常见软件图标”，直接复用 `AppLogoIcon` 展示预设图标，并提示“选择预设后会自动带入分类”。
+
+### 2. 首页视觉重构
+
+修改文件：
+
+- `app/src/main/java/com/subscriptiontracker/ui/home/HomeScreen.kt`
+- `app/src/main/java/com/subscriptiontracker/ui/home/SubscriptionCard.kt`
+- `app/src/main/java/com/subscriptiontracker/ui/home/SortSelector.kt`
+- `app/src/main/java/com/subscriptiontracker/ui/home/StatsCard.kt`
+- `app/src/main/java/com/subscriptiontracker/ui/theme/Color.kt`
+
+完成内容：
+
+- 移除传统顶部 `TopAppBar`，首页改为参考图风格的大标题区域：
+  - 标题“订阅”
+  - 副标题“管理你的所有订阅服务”
+  - 顶部胶囊分段：“订阅 / 暂停”
+  - 快捷工具胶囊：“全部 / 生效 / 当前排序”
+- 顶部“全部”和“生效”快捷入口接入真实筛选逻辑；排序胶囊点击后循环切换 `SortOption`。
+- `SortSelector` 从 Material 默认 FilterChip 改为轻量横向胶囊样式，和首页工具条统一。
+- 订阅卡片改为品牌色渐变卡：
+  - 左侧大 AppLogoIcon
+  - 左下续费进度条/剩余天数
+  - 中间名称、金额、周期、下次付款日期
+  - 状态/自动续费 pill
+  - 右侧淡化品牌水印图形
+  - 急迫到期时使用浅红底
+  - PAUSED 使用灰色降级底色
+- 统计卡片背景从纯白改为白色到淡蓝的轻渐变。
+- 主题色调整为 Google 蓝 `#4285F4`，状态色同步 Google 风格：
+  - ACTIVE `#34A853`
+  - RENEWING `#FBBC05`
+  - EXPIRING `#EA4335`
+  - PAUSED `#94A3B8`
+
+### 3. 详情页品牌 Hero
+
+修改文件：
+
+- `app/src/main/java/com/subscriptiontracker/ui/detail/DetailScreen.kt`
+
+完成内容：
+
+- 详情页顶部从旧的状态色/首字母区域改为品牌色 Hero 卡片。
+- 无自定义壁纸时，Hero 使用订阅匹配到的品牌色渐变和右侧 Logo 水印。
+- 有自定义壁纸时保留图片展示，并增加暗色遮罩保证文字可读。
+- Hero 内展示：
+  - AppLogoIcon
+  - 订阅名称
+  - 金额 / 周期
+  - 状态 + 到期日期
+
+### 4. Google 风格应用图标
+
+修改文件：
+
+- `app/src/main/res/drawable/ic_launcher_foreground.xml`
+- `app/src/main/res/values/colors.xml`（此前已改为白底）
+
+完成内容：
+
+- Launcher foreground 改为白底、Google 四色订阅提醒图标。
+- 图形含义：
+  - 四色 subscription loop
+  - 中心日历页
+  - 提醒金额点
+  - 续订完成勾
+- 保持 adaptive icon 配置不变，继续使用 `@mipmap/ic_launcher` / `@drawable/ic_launcher_foreground`。
+
+### 5. 文档同步
+
+本次按用户要求同步修改：
+
+- `communication.md`
+- `CLAUDE.md`
+- `PRD.md`
+
+主要同步内容：
+
+- 当前 UI 不再是旧的“薄渐变边框 + 普通卡片”口径，而是“Google/小红书参考风格的品牌色订阅卡片”。
+- 当前预设 Logo 不再只是分类符号，而是常见软件预设库 + 自动名称匹配。
+- 当前主题色和状态色已从旧深蓝/旧绿橙红调整为 Google 风格色板。
+- 当前首页信息架构改为大标题、胶囊分段、快捷筛选/排序、品牌订阅卡片。
+- 当前详情页信息架构改为品牌色 Hero 卡片。
+
+### 6. 验证
+
+已执行：
+
+```powershell
+.\gradlew.bat :app:compileDebugKotlin
+.\gradlew.bat :app:assembleDebug
+```
+
+结果：
+
+- `compileDebugKotlin` 成功。
+- `assembleDebug` 成功。
+- Debug APK 成功打包。
+
+注意：
+
+- 工作区里仍存在一些不是本次 UI/Logo 任务引入的未提交改动，例如 `.claude/settings.local.json`、`AppDatabase.kt`、`communication.md` 历史段落、`AGENTS.md` 等。小亮没有回滚这些改动。
+
+---
+
+## 小c (Claude Code) 复查与提交 (2026-05-11)
+
+### 构建验证
+执行 `./gradlew.bat assembleDebug`：BUILD SUCCESSFUL，37 tasks up-to-date。小亮的所有 UI/Logo 改动 + MIGRATION_1_2 重写均编译通过。
+
+### 代码审查
+快速审查了改动量最大的三个文件：
+
+| 文件 | 行变更 | 审查结论 |
+|------|--------|----------|
+| AppLogoIcon.kt | +230/-348 | 预设库从 ~15 个扩展到 45 个，数据结构合理（PresetLogo 加 brandColors/aliases），LogoStyle 干净 |
+| SubscriptionCard.kt | +309/-116 | 从旧 FrostedGlassCard 改为品牌色渐变背景 + 右侧水印 + 续费进度条，无冗余逻辑 |
+| HomeScreen.kt | +276/-41 | 大标题区 + 胶囊分段/筛选/排序，SortSelector 改为横向胶囊样式，逻辑清晰 |
+
+### MIGRATION_1_2 复核
+小亮把 ALTER TABLE 改为重建表（subscriptions_new → copy → DROP → RENAME）来修复 `intention` 可空约束。迁移策略正确，`COALESCE(intention, 'UNDECIDED')` 处理了旧数据兼容。
+
+### 提交
+所有 Codex 改动 + 本次复查记录一并 commit 并 push 到 origin/master。

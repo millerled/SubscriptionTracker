@@ -33,6 +33,60 @@ abstract class AppDatabase : RoomDatabase() {
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS subscriptions_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name TEXT NOT NULL,
+                        amount REAL NOT NULL,
+                        billingCycle TEXT NOT NULL,
+                        deadlineDate INTEGER NOT NULL,
+                        category TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        autoRenew INTEGER NOT NULL DEFAULT 0,
+                        intention TEXT NOT NULL DEFAULT 'UNDECIDED',
+                        logoUri TEXT,
+                        wallpaperUri TEXT,
+                        notes TEXT,
+                        createdAt INTEGER NOT NULL,
+                        sortOrder INTEGER NOT NULL
+                    )
+                """)
+                db.execSQL("""
+                    INSERT INTO subscriptions_new (
+                        id,
+                        name,
+                        amount,
+                        billingCycle,
+                        deadlineDate,
+                        category,
+                        status,
+                        autoRenew,
+                        intention,
+                        logoUri,
+                        wallpaperUri,
+                        notes,
+                        createdAt,
+                        sortOrder
+                    )
+                    SELECT
+                        id,
+                        name,
+                        amount,
+                        billingCycle,
+                        deadlineDate,
+                        category,
+                        status,
+                        0,
+                        COALESCE(intention, 'UNDECIDED'),
+                        logoUri,
+                        NULL,
+                        notes,
+                        createdAt,
+                        sortOrder
+                    FROM subscriptions
+                """)
+                db.execSQL("DROP TABLE subscriptions")
+                db.execSQL("ALTER TABLE subscriptions_new RENAME TO subscriptions")
+                db.execSQL("""
                     CREATE TABLE IF NOT EXISTS payment_history (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         subscriptionId INTEGER NOT NULL,
@@ -44,8 +98,6 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                 """)
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_payment_history_subscriptionId ON payment_history(subscriptionId)")
-                db.execSQL("ALTER TABLE subscriptions ADD COLUMN autoRenew INTEGER NOT NULL DEFAULT 0")
-                db.execSQL("ALTER TABLE subscriptions ADD COLUMN wallpaperUri TEXT")
             }
         }
 
