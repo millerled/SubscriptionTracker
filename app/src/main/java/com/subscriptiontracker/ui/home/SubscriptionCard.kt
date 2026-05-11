@@ -1,6 +1,7 @@
 package com.subscriptiontracker.ui.home
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,10 +9,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -35,7 +38,9 @@ import com.subscriptiontracker.ui.theme.StatusBorderRenewing
 import com.subscriptiontracker.ui.theme.TextMain
 import com.subscriptiontracker.ui.theme.TextMuted
 import com.subscriptiontracker.ui.theme.TextSecondary
+import com.subscriptiontracker.ui.theme.statusBorderColor
 import com.subscriptiontracker.util.daysUntil
+import com.subscriptiontracker.util.formatCurrency
 import com.subscriptiontracker.util.remainingDaysText
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -50,21 +55,7 @@ fun SubscriptionCard(
     val intentionColor = intentionDotColor(subscription.intention, subscription.deadlineDate)
     val daysLeft = subscription.deadlineDate.daysUntil()
 
-    val cycleText = when {
-        subscription.billingCycle == com.subscriptiontracker.domain.model.BillingCycle.ONE_TIME -> "单次"
-        subscription.autoRenew -> when (subscription.billingCycle) {
-            com.subscriptiontracker.domain.model.BillingCycle.MONTHLY -> "每月"
-            com.subscriptiontracker.domain.model.BillingCycle.QUARTERLY -> "每季"
-            com.subscriptiontracker.domain.model.BillingCycle.YEARLY -> "每年"
-            else -> "单次"
-        }
-        else -> when (subscription.billingCycle) {
-            com.subscriptiontracker.domain.model.BillingCycle.MONTHLY -> "单月"
-            com.subscriptiontracker.domain.model.BillingCycle.QUARTERLY -> "单季"
-            com.subscriptiontracker.domain.model.BillingCycle.YEARLY -> "单年"
-            else -> "单次"
-        }
-    }
+    val cycleText = subscription.billingCycle.cycleLabel(subscription.autoRenew)
 
     FrostedGlassCard(
         modifier = modifier
@@ -91,32 +82,27 @@ fun SubscriptionCard(
                     .padding(start = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = subscription.name,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = TextMain,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .padding(start = 6.dp)
-                            .size(8.dp)
-                            .drawBehind {
-                                drawCircle(color = intentionColor)
-                            }
-                    )
-                }
+                Text(
+                    text = subscription.name,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextMain,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                Box(
+                    modifier = Modifier
+                        .padding(start = 6.dp)
+                        .size(8.dp)
+                        .drawBehind {
+                            drawCircle(color = intentionColor)
+                        }
+                )
             }
 
             Text(
-                text = "¥${String.format("%.0f", subscription.amount)}",
+                text = formatCurrency(subscription.amount),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TextMain,
@@ -128,7 +114,8 @@ fun SubscriptionCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 68.dp, end = 16.dp, bottom = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = subscription.deadlineDate.remainingDaysText(),
@@ -137,6 +124,21 @@ fun SubscriptionCard(
                     StatusBorderExpiring else TextSecondary
             )
 
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(categoryColor(subscription.category))
+                )
+                Text(
+                    text = subscription.category,
+                    fontSize = 11.sp,
+                    color = TextMuted,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
+
             Text(
                 text = cycleText,
                 fontSize = 12.sp,
@@ -144,13 +146,6 @@ fun SubscriptionCard(
             )
         }
     }
-}
-
-private fun statusBorderColor(status: SubscriptionStatus): Color = when (status) {
-    SubscriptionStatus.ACTIVE -> StatusBorderActive
-    SubscriptionStatus.RENEWING -> StatusBorderRenewing
-    SubscriptionStatus.EXPIRING -> StatusBorderExpiring
-    SubscriptionStatus.PAUSED -> StatusBorderPaused
 }
 
 private fun intentionDotColor(intention: Intention, deadlineDate: java.time.LocalDate): Color {
@@ -163,4 +158,13 @@ private fun intentionDotColor(intention: Intention, deadlineDate: java.time.Loca
         return IntentionUndecidedStale
     }
     return baseColor
+}
+
+private fun categoryColor(category: String): Color = when (category) {
+    "娱乐" -> Color(0xFFE74C3C)
+    "工具" -> Color(0xFF3498DB)
+    "健康" -> Color(0xFF2ECC71)
+    "学习" -> Color(0xFFF39C12)
+    "生活" -> Color(0xFF9B59B6)
+    else -> Color(0xFF95A5A6)
 }

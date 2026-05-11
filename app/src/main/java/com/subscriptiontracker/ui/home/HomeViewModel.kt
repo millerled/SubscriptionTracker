@@ -7,6 +7,7 @@ import com.subscriptiontracker.data.local.AppDatabase
 import com.subscriptiontracker.data.repository.SubscriptionRepository
 import com.subscriptiontracker.domain.model.Subscription
 import com.subscriptiontracker.domain.model.SubscriptionStatus
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -66,10 +67,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _expiringCount = MutableStateFlow(0)
     val expiringCount: StateFlow<Int> = _expiringCount
 
-    // Due subscriptions
-    private val _dueSubscriptions = MutableStateFlow<List<Subscription>>(emptyList())
-    val dueSubscriptions: StateFlow<List<Subscription>> = _dueSubscriptions
-
     // Confirmation dialog
     private val _pendingConfirmations = MutableStateFlow<List<PendingSubscription>>(emptyList())
     val pendingConfirmations: StateFlow<List<PendingSubscription>> = _pendingConfirmations
@@ -77,48 +74,88 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _dialogCurrentIndex = MutableStateFlow(0)
     val dialogCurrentIndex: StateFlow<Int> = _dialogCurrentIndex
 
+    private val _actionSheetSubscription = MutableStateFlow<Subscription?>(null)
+    val actionSheetSubscription: StateFlow<Subscription?> = _actionSheetSubscription
+
+    private val _heatmapData = MutableStateFlow<Map<LocalDate, Int>>(emptyMap())
+    val heatmapData: StateFlow<Map<LocalDate, Int>> = _heatmapData
+
     // Delete
     private val _subscriptionToDelete = MutableStateFlow<Subscription?>(null)
     val subscriptionToDelete: StateFlow<Subscription?> = _subscriptionToDelete
 
+    fun showActionSheet(subscription: Subscription) {
+        _actionSheetSubscription.value = subscription
+    }
+
+    fun dismissActionSheet() {
+        _actionSheetSubscription.value = null
+    }
+
+    fun pinSubscription() {
+        val sub = _actionSheetSubscription.value ?: return
+        viewModelScope.launch {
+            repository.pinSubscription(sub.id)
+            _actionSheetSubscription.value = null
+        }
+    }
+
+    fun unpinSubscription() {
+        val sub = _actionSheetSubscription.value ?: return
+        viewModelScope.launch {
+            repository.unpinSubscription(sub.id)
+            _actionSheetSubscription.value = null
+        }
+    }
+
+    fun deleteFromActionSheet() {
+        val sub = _actionSheetSubscription.value ?: return
+        _actionSheetSubscription.value = null
+        _subscriptionToDelete.value = sub
+    }
+
     init {
         loadStats()
         checkDueSubscriptions()
+        loadHeatmap()
+    }
+
+    private fun loadHeatmap() {
+        viewModelScope.launch {
+            _heatmapData.value = repository.getActivityHeatmapData()
+        }
     }
 
     private fun loadStats() {
-        viewModelScope.launch {
-            allSubscriptions.collect { subs ->
-                val now = LocalDate.now()
-                val monthStart = now.withDayOfMonth(1)
-                val monthEnd = now.withDayOfMonth(now.lengthOfMonth())
-                val todayEpoch = now.toEpochDay()
+        val now = LocalDate.now()
+        val monthStart = now.withDayOfMonth(1)
+        val monthEnd = now.withDayOfMonth(now.lengthOfMonth())
+        val monthStartEpoch = monthStart.toEpochDay()
+        val monthEndEpoch = monthEnd.toEpochDay()
+        val epochRange = monthStartEpoch..monthEndEpoch
 
-                // Monthly total: all subscriptions with amount
+        viewModelScope.launch {
+            combine(
+                allSubscriptions,
+                repository.getRenewedPaymentsInRange(monthStartEpoch, monthEndEpoch)
+            ) { subs, payments ->
                 val total = subs.sumOf { it.amount }
                 _monthlyTotal.value = total
-                _dailyAverage.value = total / now.lengthOfMonth()
-
-                // Paid: confirmed renewed in this month
-                repository.getRenewedPaymentsInRange(
-                    monthStart.toEpochDay(),
-                    monthEnd.toEpochDay()
-                ).collect { payments ->
-                    _paidAmount.value = payments.sumOf { it.amount }
+                val totalDurationDays = subs.sumOf {
+                    val duration = it.deadlineDate.toEpochDay() - it.startDate.toEpochDay()
+                    if (duration > 0) duration else 0L
                 }
-
-                // Pending: subs with deadline this month not yet confirmed
+                _dailyAverage.value = if (totalDurationDays > 0) total / totalDurationDays else 0.0
+                _paidAmount.value = payments.sumOf { it.amount }
                 _pendingAmount.value = subs
-                    .filter { it.deadlineDate.toEpochDay() in monthStart.toEpochDay()..monthEnd.toEpochDay() }
+                    .filter { it.deadlineDate.toEpochDay() in epochRange }
                     .filter { it.status == SubscriptionStatus.ACTIVE }
                     .sumOf { it.amount }
-
-                // Counts
                 _activeCount.value = subs.count { it.status == SubscriptionStatus.ACTIVE }
                 _pausedCount.value = subs.count { it.status == SubscriptionStatus.PAUSED }
                 _renewingCount.value = subs.count { it.status == SubscriptionStatus.RENEWING }
                 _expiringCount.value = subs.count { it.status == SubscriptionStatus.EXPIRING }
-            }
+            }.collect {}
         }
     }
 
@@ -126,8 +163,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val due = repository.getDueWithinDays(7)
                 .filter { it.status == SubscriptionStatus.ACTIVE }
-            _dueSubscriptions.value = due
-
             if (due.size in 1..7) {
                 _pendingConfirmations.value = due.map { PendingSubscription(it) }
                 _dialogCurrentIndex.value = 0
@@ -153,14 +188,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             }
             repository.recordPayment(sub.id, sub.amount, action)
 
-            val newStatus = when (choice) {
+            when (choice) {
                 PaymentChoice.RENEW -> {
-                    val cycleDays = when (sub.billingCycle) {
-                        com.subscriptiontracker.domain.model.BillingCycle.MONTHLY -> 30L
-                        com.subscriptiontracker.domain.model.BillingCycle.QUARTERLY -> 91L
-                        com.subscriptiontracker.domain.model.BillingCycle.YEARLY -> 365L
-                        com.subscriptiontracker.domain.model.BillingCycle.ONE_TIME -> 0L
-                    }
+                    val cycleDays = sub.billingCycle.cycleDays
                     val newDeadline = if (cycleDays > 0)
                         sub.deadlineDate.plusDays(cycleDays)
                     else sub.deadlineDate
@@ -168,21 +198,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                         status = SubscriptionStatus.RENEWING,
                         deadlineDate = newDeadline
                     ))
-                    SubscriptionStatus.RENEWING
                 }
                 PaymentChoice.CANCEL -> {
                     repository.update(sub.copy(status = SubscriptionStatus.EXPIRING))
-                    SubscriptionStatus.EXPIRING
                 }
-                PaymentChoice.UNDECIDED -> SubscriptionStatus.ACTIVE
+                PaymentChoice.UNDECIDED -> { /* status stays ACTIVE */ }
             }
-        }
 
-        if (index + 1 >= pending.size) {
-            _pendingConfirmations.value = emptyList()
-            _dialogCurrentIndex.value = 0
-        } else {
-            _dialogCurrentIndex.value = index + 1
+            if (index + 1 >= pending.size) {
+                _pendingConfirmations.value = emptyList()
+                _dialogCurrentIndex.value = 0
+            } else {
+                _dialogCurrentIndex.value = index + 1
+            }
         }
     }
 

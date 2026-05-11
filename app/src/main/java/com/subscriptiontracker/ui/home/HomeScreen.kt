@@ -1,16 +1,19 @@
 package com.subscriptiontracker.ui.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,10 +28,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.subscriptiontracker.domain.model.SubscriptionStatus
+import com.subscriptiontracker.ui.components.ActivityHeatmap
 import com.subscriptiontracker.ui.components.ConfirmDeleteDialog
+import com.subscriptiontracker.ui.components.SubscriptionActionSheet
 import com.subscriptiontracker.ui.theme.PageBackground
 import com.subscriptiontracker.ui.theme.Primary
 import com.subscriptiontracker.ui.theme.TextMuted
@@ -40,7 +45,6 @@ import com.subscriptiontracker.ui.theme.OnPrimary
 fun HomeScreen(
     viewModel: HomeViewModel,
     onAddClick: () -> Unit,
-    onEditClick: (Long) -> Unit,
     onDetailClick: (Long) -> Unit
 ) {
     val subscriptions by viewModel.subscriptions.collectAsState()
@@ -56,6 +60,8 @@ fun HomeScreen(
     val pendingConfirmations by viewModel.pendingConfirmations.collectAsState()
     val dialogIndex by viewModel.dialogCurrentIndex.collectAsState()
     val subscriptionToDelete by viewModel.subscriptionToDelete.collectAsState()
+    val actionSheetSubscription by viewModel.actionSheetSubscription.collectAsState()
+    val heatmapData by viewModel.heatmapData.collectAsState()
 
     Scaffold(
         containerColor = PageBackground,
@@ -88,27 +94,34 @@ fun HomeScreen(
                 )
             }
 
+            if (heatmapData.isNotEmpty()) {
+                item {
+                    ActivityHeatmap(
+                        data = heatmapData,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
             item {
                 Row(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Text(
-                            text = "即将续订 ($renewingCount)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (activeFilter == SubscriptionStatus.RENEWING) Primary else TextSecondary,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
-                        Text(
-                            text = "即将到期 ($expiringCount)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (activeFilter == SubscriptionStatus.EXPIRING) Primary else TextSecondary,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
-                    }
+                    Text(
+                        text = "即将续订 ($renewingCount)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (activeFilter == SubscriptionStatus.RENEWING) Primary else TextSecondary,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                    Text(
+                        text = "即将到期 ($expiringCount)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (activeFilter == SubscriptionStatus.EXPIRING) Primary else TextSecondary,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
                 }
             }
 
@@ -125,16 +138,39 @@ fun HomeScreen(
 
             if (subscriptions.isEmpty()) {
                 item {
-                    Text(
-                        text = "还没有订阅\n点击 + 开始添加",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = TextMuted,
-                        textAlign = TextAlign.Center,
+                    Column(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .wrapContentSize(Alignment.Center)
-                            .padding(32.dp)
-                    )
+                            .fillMaxWidth()
+                            .padding(top = 80.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(Primary.copy(alpha = 0.08f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                tint = Primary.copy(alpha = 0.4f),
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "还没有订阅",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextMuted
+                        )
+                        Text(
+                            text = "点击右下角 + 开始添加",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextMuted.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
             } else {
                 item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -145,7 +181,7 @@ fun HomeScreen(
                     SubscriptionCard(
                         subscription = subscription,
                         onClick = { onDetailClick(subscription.id) },
-                        onLongClick = { viewModel.showDeleteConfirmation(subscription) }
+                        onLongClick = { viewModel.showActionSheet(subscription) }
                     )
                 }
                 item { Spacer(modifier = Modifier.height(80.dp)) }
@@ -153,7 +189,6 @@ fun HomeScreen(
         }
     }
 
-    // Payment confirmation dialog
     if (pendingConfirmations.isNotEmpty() && dialogIndex < pendingConfirmations.size) {
         PaymentConfirmationDialog(
             pendingItems = pendingConfirmations,
@@ -163,7 +198,16 @@ fun HomeScreen(
         )
     }
 
-    // Delete confirmation dialog
+    actionSheetSubscription?.let { subscription ->
+        SubscriptionActionSheet(
+            subscription = subscription,
+            onDismiss = { viewModel.dismissActionSheet() },
+            onPin = { viewModel.pinSubscription() },
+            onUnpin = { viewModel.unpinSubscription() },
+            onDelete = { viewModel.deleteFromActionSheet() }
+        )
+    }
+
     subscriptionToDelete?.let { subscription ->
         ConfirmDeleteDialog(
             subscription = subscription,

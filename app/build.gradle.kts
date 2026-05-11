@@ -71,6 +71,12 @@ dependencies {
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.8.5")
 
+    // Image loading
+    implementation("io.coil-kt:coil-compose:2.7.0")
+
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
+
     // Core
     implementation("androidx.core:core-ktx:1.15.0")
 

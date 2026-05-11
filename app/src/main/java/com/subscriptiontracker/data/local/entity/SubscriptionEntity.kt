@@ -2,6 +2,7 @@ package com.subscriptiontracker.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.time.LocalDate
 
 @Entity(tableName = "subscriptions")
 data class SubscriptionEntity(
@@ -19,5 +20,7 @@ data class SubscriptionEntity(
     val wallpaperUri: String? = null,
     val notes: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val sortOrder: Int = 0
+    val sortOrder: Int = 0,
+    val startDate: Long = LocalDate.now().toEpochDay(),
+    val modifiedAt: Long = 0L
 )

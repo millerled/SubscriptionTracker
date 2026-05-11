@@ -38,4 +38,17 @@ interface SubscriptionDao {
 
     @Delete
     suspend fun delete(subscription: SubscriptionEntity)
+
+    @Query("SELECT COALESCE(MIN(sortOrder), 0) FROM subscriptions")
+    suspend fun getMinSortOrder(): Int
+
+    @Query("UPDATE subscriptions SET sortOrder = :sortOrder WHERE id = :id")
+    suspend fun updateSortOrder(id: Long, sortOrder: Int)
+
+    @Query("""
+        SELECT * FROM subscriptions
+        WHERE (createdAt >= :startMillis AND createdAt <= :endMillis)
+           OR (modifiedAt >= :startMillis AND modifiedAt <= :endMillis AND modifiedAt > 0)
+    """)
+    suspend fun getActiveInRange(startMillis: Long, endMillis: Long): List<SubscriptionEntity>
 }

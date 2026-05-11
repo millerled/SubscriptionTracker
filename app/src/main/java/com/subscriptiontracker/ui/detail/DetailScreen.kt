@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -35,30 +34,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.subscriptiontracker.domain.model.Intention
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.subscriptiontracker.domain.model.SubscriptionStatus
 import com.subscriptiontracker.ui.theme.CardWhite
-import com.subscriptiontracker.ui.theme.IntentionConsidering
-import com.subscriptiontracker.ui.theme.IntentionQuitting
-import com.subscriptiontracker.ui.theme.IntentionUndecided
-import com.subscriptiontracker.ui.theme.IntentionUndecidedStale
 import com.subscriptiontracker.ui.theme.PageBackground
-import com.subscriptiontracker.ui.theme.Primary
 import com.subscriptiontracker.ui.theme.StatusBorderActive
 import com.subscriptiontracker.ui.theme.StatusBorderExpiring
-import com.subscriptiontracker.ui.theme.StatusBorderPaused
-import com.subscriptiontracker.ui.theme.StatusBorderRenewing
+import com.subscriptiontracker.ui.theme.Primary
 import com.subscriptiontracker.ui.theme.TextMain
 import com.subscriptiontracker.ui.theme.TextMuted
 import com.subscriptiontracker.ui.theme.TextSecondary
 import com.subscriptiontracker.ui.theme.OnPrimary
+import com.subscriptiontracker.ui.theme.statusBorderColor
 import com.subscriptiontracker.util.formatCurrency
 import com.subscriptiontracker.util.formatFull
 import com.subscriptiontracker.util.formatShort
+import com.subscriptiontracker.util.initialLetter
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,7 +93,6 @@ fun DetailScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // Wallpaper area
                 item {
                     Box(
                         modifier = Modifier
@@ -103,26 +100,31 @@ fun DetailScreen(
                             .height(160.dp)
                             .padding(16.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .background(
-                                when (sub.status) {
-                                    SubscriptionStatus.ACTIVE -> StatusBorderActive.copy(alpha = 0.15f)
-                                    SubscriptionStatus.RENEWING -> StatusBorderRenewing.copy(alpha = 0.15f)
-                                    SubscriptionStatus.EXPIRING -> StatusBorderExpiring.copy(alpha = 0.15f)
-                                    SubscriptionStatus.PAUSED -> StatusBorderPaused.copy(alpha = 0.15f)
-                                }
-                            ),
+                            .background(statusBackgroundColor(sub.status)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = sub.name.firstOrNull()?.uppercase() ?: "?",
-                            fontSize = 64.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White.copy(alpha = 0.6f)
-                        )
+                        if (!sub.wallpaperUri.isNullOrBlank()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(if (sub.wallpaperUri.startsWith("content://")) sub.wallpaperUri
+                                        else File(sub.wallpaperUri))
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "${sub.name} 壁纸",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.matchParentSize()
+                            )
+                        } else {
+                            Text(
+                                text = sub.name.initialLetter(),
+                                fontSize = 64.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White.copy(alpha = 0.6f)
+                            )
+                        }
                     }
                 }
 
-                // Info summary
                 item {
                     Column(
                         modifier = Modifier.padding(horizontal = 16.dp)
@@ -135,12 +137,7 @@ fun DetailScreen(
                         Row(modifier = Modifier.padding(top = 4.dp)) {
                             Text(
                                 text = "${sub.status.displayName} · ",
-                                color = when (sub.status) {
-                                    SubscriptionStatus.ACTIVE -> StatusBorderActive
-                                    SubscriptionStatus.RENEWING -> StatusBorderRenewing
-                                    SubscriptionStatus.EXPIRING -> StatusBorderExpiring
-                                    SubscriptionStatus.PAUSED -> StatusBorderPaused
-                                },
+                                color = statusBorderColor(sub.status),
                                 fontSize = 13.sp
                             )
                             Text(
@@ -153,7 +150,6 @@ fun DetailScreen(
                     }
                 }
 
-                // Expandable editor toggle
                 item {
                     Row(
                         modifier = Modifier
@@ -194,7 +190,6 @@ fun DetailScreen(
                     }
                 }
 
-                // Payment history
                 item {
                     Text(
                         text = "历史扣费记录",
@@ -213,7 +208,7 @@ fun DetailScreen(
                         )
                     }
                 } else {
-                    items(paymentHistory) { payment ->
+                    items(paymentHistory, key = { it.id }) { payment ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -254,3 +249,5 @@ fun DetailScreen(
         }
     }
 }
+
+private fun statusBackgroundColor(status: SubscriptionStatus): Color = statusBorderColor(status).copy(alpha = 0.15f)

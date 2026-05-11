@@ -1,5 +1,6 @@
 package com.subscriptiontracker
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,20 +24,39 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        handleDeepLink(intent)
         setContent {
             SubscriptionTrackerTheme {
-                SubscriptionTrackerNavGraph()
+                SubscriptionTrackerNavGraph(deepLinkId = pendingDeepLinkId)
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleDeepLink(intent)
+    }
+
+    private var pendingDeepLinkId: Long? = null
+
+    private fun handleDeepLink(intent: Intent) {
+        val uri = intent.data ?: return
+        if (uri.scheme == "subscriptiontracker" && uri.host == "detail") {
+            pendingDeepLinkId = uri.lastPathSegment?.toLongOrNull()
         }
     }
 }
 
 @Composable
-fun SubscriptionTrackerNavGraph() {
+fun SubscriptionTrackerNavGraph(deepLinkId: Long? = null) {
     val navController = rememberNavController()
     val homeViewModel: HomeViewModel = viewModel()
     val addEditViewModel: AddEditViewModel = viewModel()
     val detailViewModel: DetailViewModel = viewModel()
+
+    androidx.compose.runtime.LaunchedEffect(deepLinkId) {
+        deepLinkId?.let { navController.navigate("detail/$it") }
+    }
 
     NavHost(
         navController = navController,
@@ -48,9 +68,6 @@ fun SubscriptionTrackerNavGraph() {
                 onAddClick = {
                     addEditViewModel.resetForNew()
                     navController.navigate("addEdit/0")
-                },
-                onEditClick = { id ->
-                    navController.navigate("addEdit/$id")
                 },
                 onDetailClick = { id ->
                     navController.navigate("detail/$id")

@@ -16,5 +16,7 @@ data class Subscription(
     val wallpaperUri: String? = null,
     val notes: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val sortOrder: Int = 0
+    val sortOrder: Int = 0,
+    val startDate: LocalDate = LocalDate.now(),
+    val modifiedAt: Long = 0L
 )

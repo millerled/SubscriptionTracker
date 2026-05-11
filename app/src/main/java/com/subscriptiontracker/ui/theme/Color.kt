@@ -1,6 +1,7 @@
 package com.subscriptiontracker.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import com.subscriptiontracker.domain.model.SubscriptionStatus
 
 // Backgrounds
 val PageBackground = Color(0xFFF5F7FA)
@@ -32,5 +33,9 @@ val IntentionUndecidedStale = Color(0xFF374151)
 val PaidGreen = Color(0xFF2ECC71)
 val PendingOrange = Color(0xFFE67E22)
 
-// Shapes (moved from separate file for simplicity)
-
+fun statusBorderColor(status: SubscriptionStatus): Color = when (status) {
+    SubscriptionStatus.ACTIVE -> StatusBorderActive
+    SubscriptionStatus.RENEWING -> StatusBorderRenewing
+    SubscriptionStatus.EXPIRING -> StatusBorderExpiring
+    SubscriptionStatus.PAUSED -> StatusBorderPaused
+}

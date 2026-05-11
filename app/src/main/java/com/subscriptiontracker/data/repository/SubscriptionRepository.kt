@@ -11,7 +11,9 @@ import com.subscriptiontracker.domain.model.Subscription
 import com.subscriptiontracker.domain.model.SubscriptionStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 
 class SubscriptionRepository(
     private val dao: SubscriptionDao,
@@ -74,6 +76,40 @@ class SubscriptionRepository(
     fun getAllPaymentsInRange(startDate: Long, endDate: Long): Flow<List<PaymentHistoryEntity>> =
         historyDao.getAllInRange(startDate, endDate)
 
+    suspend fun pinSubscription(id: Long) {
+        val minOrder = dao.getMinSortOrder()
+        dao.updateSortOrder(id, minOrder - 1)
+    }
+
+    suspend fun unpinSubscription(id: Long) {
+        dao.updateSortOrder(id, 0)
+    }
+
+    suspend fun getActivityHeatmapData(weeks: Int = 12): Map<LocalDate, Int> {
+        val today = LocalDate.now()
+        val startDate = today.minusWeeks(weeks.toLong()).with(java.time.DayOfWeek.SUNDAY)
+        val zone = ZoneId.systemDefault()
+        val startMillis = startDate.atStartOfDay(zone).toInstant().toEpochMilli()
+        val endMillis = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
+
+        val entities = dao.getActiveInRange(startMillis, endMillis)
+        val counts = mutableMapOf<LocalDate, Int>()
+
+        entities.forEach { entity ->
+            val createdDate = Instant.ofEpochMilli(entity.createdAt).atZone(zone).toLocalDate()
+            if (createdDate >= startDate) {
+                counts[createdDate] = (counts[createdDate] ?: 0) + 1
+            }
+            if (entity.modifiedAt > 0) {
+                val modifiedDate = Instant.ofEpochMilli(entity.modifiedAt).atZone(zone).toLocalDate()
+                if (modifiedDate >= startDate) {
+                    counts[modifiedDate] = (counts[modifiedDate] ?: 0) + 1
+                }
+            }
+        }
+        return counts
+    }
+
     private fun SubscriptionEntity.toDomain() = Subscription(
         id = id,
         name = name,
@@ -88,7 +124,9 @@ class SubscriptionRepository(
         wallpaperUri = wallpaperUri,
         notes = notes,
         createdAt = createdAt,
-        sortOrder = sortOrder
+        sortOrder = sortOrder,
+        startDate = LocalDate.ofEpochDay(startDate),
+        modifiedAt = modifiedAt
     )
 
     private fun Subscription.toEntity() = SubscriptionEntity(
@@ -105,6 +143,8 @@ class SubscriptionRepository(
         wallpaperUri = wallpaperUri,
         notes = notes,
         createdAt = createdAt,
-        sortOrder = sortOrder
+        sortOrder = sortOrder,
+        startDate = startDate.toEpochDay(),
+        modifiedAt = modifiedAt
     )
 }

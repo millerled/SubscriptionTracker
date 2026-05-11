@@ -19,6 +19,8 @@ fun LocalDate.daysUntil(): Long =
 fun LocalDate.daysSince(): Long =
     ChronoUnit.DAYS.between(this, LocalDate.now())
 
+fun String.initialLetter(): String = firstOrNull()?.uppercase() ?: "?"
+
 fun LocalDate.remainingDaysText(): String {
     val days = this.daysUntil()
     return when {

@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.subscriptiontracker.domain.model.Subscription
+import com.subscriptiontracker.util.formatAmountPerCycle
 import com.subscriptiontracker.util.remainingDaysText
 
 data class PendingSubscription(
@@ -33,8 +34,7 @@ fun PaymentConfirmationDialog(
     pendingItems: List<PendingSubscription>,
     currentIndex: Int,
     onChoice: (PaymentChoice) -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    onDismiss: () -> Unit
 ) {
     if (currentIndex >= pendingItems.size) return
 
@@ -58,7 +58,7 @@ fun PaymentConfirmationDialog(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "¥${String.format("%.2f", sub.amount)} / ${sub.billingCycle.displayName}",
+                    text = formatAmountPerCycle(sub.amount, sub.billingCycle.displayName),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(

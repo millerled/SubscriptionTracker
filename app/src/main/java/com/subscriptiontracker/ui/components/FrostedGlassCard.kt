@@ -1,7 +1,6 @@
 package com.subscriptiontracker.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,11 +42,6 @@ fun FrostedGlassCard(
                     )
                 }
             }
-            .border(
-                width = if (borderColor == Color.Transparent) 0.dp else 0.5.dp,
-                color = borderColor.copy(alpha = 0.15f),
-                shape = shape
-            )
             .background(backgroundColor, shape)
     ) {
         content()

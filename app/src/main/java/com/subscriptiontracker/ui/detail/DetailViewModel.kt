@@ -7,6 +7,7 @@ import com.subscriptiontracker.data.local.AppDatabase
 import com.subscriptiontracker.data.local.entity.PaymentHistoryEntity
 import com.subscriptiontracker.data.repository.SubscriptionRepository
 import com.subscriptiontracker.domain.model.Subscription
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -28,8 +29,12 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
     private val _showEditor = MutableStateFlow(false)
     val showEditor: StateFlow<Boolean> = _showEditor
 
+    private var loadJob: Job? = null
+
     fun loadSubscription(id: Long) {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        _paymentHistory.value = emptyList()
+        loadJob = viewModelScope.launch {
             val sub = repository.getById(id)
             _subscription.value = sub
             if (sub != null) {
@@ -43,6 +48,4 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
     fun toggleEditor() {
         _showEditor.value = !_showEditor.value
     }
-
-    fun onEditClick(): Long = _subscription.value?.id ?: 0L
 }
